@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-and-release:
+    name: Build Signed APKs + Publish Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Inject google-services.json (business app)
+        run: echo "${{ secrets.GOOGLE_SERVICES_JSON_BUSINESS }}" > counter-tap-business/app/google-services.json
+
+      - name: Inject google-services.json (customer app)
+        run: echo "${{ secrets.GOOGLE_SERVICES_JSON_CUSTOMER }}" > counter-tap/app/google-services.json
+
+      - name: Decode keystore
+        run: echo "${{ secrets.KEYSTORE_FILE }}" | base64 --decode > keystore.jks
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Run all tests
+        run: |
+          ./gradlew :counter-tap-business:app:testDebugUnitTest
+          ./gradlew :counter-tap:app:testDebugUnitTest
+
+      - name: Build release APK — business app
+        run: ./gradlew :counter-tap-business:app:assembleRelease
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/keystore.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Build release APK — customer app
+        run: ./gradlew :counter-tap:app:assembleRelease
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/keystore.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            counter-tap-business/app/build/outputs/apk/release/app-release.apk
+            counter-tap/app/build/outputs/apk/release/app-release.apk
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

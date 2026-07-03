@@ -1,0 +1,109 @@
+[versions]
+# Build tools
+agp                     = "8.5.0"
+kotlin                  = "2.0.0"
+
+# AndroidX core
+coreKtx                 = "1.13.1"
+lifecycleRuntimeKtx     = "2.8.3"
+activityCompose         = "1.9.0"
+
+# Jetpack Compose
+composeBom              = "2024.06.00"
+navigationCompose       = "2.7.7"
+
+# Firebase
+firebaseBom             = "33.1.1"
+
+# Google Sign-In
+credentialsManager      = "1.3.0"
+googleid                = "1.1.1"
+
+# Hilt (Dependency Injection)
+hilt                    = "2.51.1"
+hiltNavigationCompose   = "1.2.0"
+
+# Coroutines
+coroutines              = "1.8.1"
+
+# Image loading
+coil                    = "2.6.0"
+
+# QR code generation (business app)
+zxing                   = "3.5.3"
+
+# ML Kit barcode scanning (customer app)
+mlkitBarcode            = "18.3.0"
+cameraX                 = "1.3.4"
+
+# Testing
+junit                   = "4.13.2"
+junitExt                = "1.2.1"
+espressoCore            = "3.6.1"
+mockk                   = "1.13.11"
+coroutinesTest          = "1.8.1"
+
+[libraries]
+# AndroidX
+androidx-core-ktx               = { group = "androidx.core",             name = "core-ktx",                      version.ref = "coreKtx" }
+androidx-lifecycle-runtime      = { group = "androidx.lifecycle",         name = "lifecycle-runtime-ktx",         version.ref = "lifecycleRuntimeKtx" }
+androidx-activity-compose       = { group = "androidx.activity",          name = "activity-compose",              version.ref = "activityCompose" }
+
+# Compose BOM (manages all Compose versions together)
+androidx-compose-bom            = { group = "androidx.compose",           name = "compose-bom",                   version.ref = "composeBom" }
+androidx-compose-ui             = { group = "androidx.compose.ui",        name = "ui" }
+androidx-compose-ui-graphics    = { group = "androidx.compose.ui",        name = "ui-graphics" }
+androidx-compose-ui-tooling     = { group = "androidx.compose.ui",        name = "ui-tooling" }
+androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui",   name = "ui-tooling-preview" }
+androidx-compose-material3      = { group = "androidx.compose.material3", name = "material3" }
+androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui",        name = "ui-test-junit4" }
+androidx-compose-ui-test-manifest = { group = "androidx.compose.ui",      name = "ui-test-manifest" }
+androidx-navigation-compose     = { group = "androidx.navigation",         name = "navigation-compose",            version.ref = "navigationCompose" }
+
+# Firebase BOM
+firebase-bom                    = { group = "com.google.firebase",        name = "firebase-bom",                  version.ref = "firebaseBom" }
+firebase-firestore              = { group = "com.google.firebase",        name = "firebase-firestore-ktx" }
+firebase-auth                   = { group = "com.google.firebase",        name = "firebase-auth-ktx" }
+firebase-storage                = { group = "com.google.firebase",        name = "firebase-storage-ktx" }
+firebase-messaging              = { group = "com.google.firebase",        name = "firebase-messaging-ktx" }
+
+# Google Sign-In (Credential Manager — modern approach)
+androidx-credentials            = { group = "androidx.credentials",       name = "credentials",                   version.ref = "credentialsManager" }
+androidx-credentials-play       = { group = "androidx.credentials",       name = "credentials-play-services-auth", version.ref = "credentialsManager" }
+google-identity-googleid        = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
+
+# Hilt
+hilt-android                    = { group = "com.google.dagger",          name = "hilt-android",                  version.ref = "hilt" }
+hilt-compiler                   = { group = "com.google.dagger",          name = "hilt-android-compiler",         version.ref = "hilt" }
+hilt-navigation-compose         = { group = "androidx.hilt",              name = "hilt-navigation-compose",       version.ref = "hiltNavigationCompose" }
+
+# Coroutines
+kotlinx-coroutines-android      = { group = "org.jetbrains.kotlinx",     name = "kotlinx-coroutines-android",    version.ref = "coroutines" }
+kotlinx-coroutines-playservices = { group = "org.jetbrains.kotlinx",     name = "kotlinx-coroutines-play-services", version.ref = "coroutines" }
+
+# Image loading
+coil-compose                    = { group = "io.coil-kt",                 name = "coil-compose",                  version.ref = "coil" }
+
+# QR generation
+zxing-core                      = { group = "com.google.zxing",           name = "core",                          version.ref = "zxing" }
+
+# QR scanning
+mlkit-barcode-scanning          = { group = "com.google.mlkit",           name = "barcode-scanning",              version.ref = "mlkitBarcode" }
+camerax-camera2                 = { group = "androidx.camera",            name = "camera-camera2",                version.ref = "cameraX" }
+camerax-lifecycle               = { group = "androidx.camera",            name = "camera-lifecycle",              version.ref = "cameraX" }
+camerax-view                    = { group = "androidx.camera",            name = "camera-view",                   version.ref = "cameraX" }
+
+# Testing
+junit                           = { group = "junit",                      name = "junit",                         version.ref = "junit" }
+junit-ext                       = { group = "androidx.test.ext",          name = "junit",                         version.ref = "junitExt" }
+espresso-core                   = { group = "androidx.test.espresso",     name = "espresso-core",                 version.ref = "espressoCore" }
+mockk                           = { group = "io.mockk",                   name = "mockk",                         version.ref = "mockk" }
+kotlinx-coroutines-test         = { group = "org.jetbrains.kotlinx",     name = "kotlinx-coroutines-test",       version.ref = "coroutinesTest" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library     = { id = "com.android.library",     version.ref = "agp" }
+kotlin-android      = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose      = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+google-services     = { id = "com.google.gms.google-services", version = "4.4.2" }
+hilt                = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }

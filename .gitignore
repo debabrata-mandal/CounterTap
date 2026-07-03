@@ -1,0 +1,61 @@
+# ─── Android ─────────────────────────────────────────────────
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+*.apk
+*.aab
+*.ap_
+
+# Generated files
+bin/
+gen/
+out/
+release/
+
+# Gradle wrapper
+!gradle/wrapper/gradle-wrapper.jar
+!**/gradle/wrapper/gradle-wrapper.properties
+
+# IntelliJ / Android Studio
+*.iws
+*.ipr
+.idea/
+!.idea/codeStyles/
+!.idea/inspectionProfiles/
+
+# ─── Firebase ────────────────────────────────────────────────
+# NEVER commit google-services.json — injected via CI secrets
+google-services.json
+
+# Firebase local emulator
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# ─── Node (backend/functions) ────────────────────────────────
+node_modules/
+backend/functions/lib/
+backend/functions/.env
+
+# ─── Keys & secrets ──────────────────────────────────────────
+*.keystore
+*.jks
+*.p12
+keystore.properties
+
+# ─── OS ──────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Misc ────────────────────────────────────────────────────
+*.log
+*.tmp
+*.bak
