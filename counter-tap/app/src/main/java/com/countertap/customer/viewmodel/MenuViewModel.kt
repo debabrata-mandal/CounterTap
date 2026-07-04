@@ -23,7 +23,8 @@ data class MenuUiState(
 
 @HiltViewModel
 class MenuViewModel @Inject constructor(
-    private val repository: ShopRepository
+    private val repository: ShopRepository,
+    private val shopHistory: com.countertap.customer.repository.ShopHistoryRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MenuUiState())
@@ -42,6 +43,9 @@ class MenuViewModel @Inject constructor(
                     categories = categories,
                     products = products
                 )
+                if (shop != null) {
+                    shopHistory.saveShop(tenantId, shop.name, shop.address)
+                }
             } catch (e: Exception) {
                 _uiState.value = MenuUiState(error = e.message ?: "Failed to load menu")
             }

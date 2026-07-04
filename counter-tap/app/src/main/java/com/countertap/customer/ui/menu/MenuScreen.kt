@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
@@ -55,6 +56,7 @@ import com.countertap.shared.Product
 fun MenuScreen(
     tenantId: String,
     onGoToCart: () -> Unit,
+    onChangeRestaurant: () -> Unit = {},
     menuViewModel: MenuViewModel = hiltViewModel(),
     cartViewModel: CartViewModel = hiltViewModel()
 ) {
@@ -68,25 +70,35 @@ fun MenuScreen(
         Column(modifier = Modifier.fillMaxSize()) {
 
             // Header
-            Column(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(CardBackground)
                     .statusBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                    .padding(start = 20.dp, end = 8.dp, top = 14.dp, bottom = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = uiState.shop?.name ?: "Loading…",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
-                if (uiState.shop?.address?.isNotBlank() == true) {
-                    Spacer(modifier = Modifier.height(2.dp))
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = uiState.shop!!.address,
-                        fontSize = 13.sp,
-                        color = TextSecondary
+                        text = uiState.shop?.name ?: "Loading…",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    if (uiState.shop?.address?.isNotBlank() == true) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = uiState.shop!!.address,
+                            fontSize = 13.sp,
+                            color = TextSecondary
+                        )
+                    }
+                }
+                IconButton(onClick = onChangeRestaurant) {
+                    Icon(
+                        Icons.Default.QrCodeScanner,
+                        contentDescription = "Change Restaurant",
+                        tint = AccentBlue
                     )
                 }
             }

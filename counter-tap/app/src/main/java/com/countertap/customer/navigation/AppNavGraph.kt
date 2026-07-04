@@ -11,8 +11,9 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.countertap.customer.ui.auth.SignInScreen
 import com.countertap.customer.ui.cart.CartScreen
+import com.countertap.customer.ui.home.CustomerHomeScreen
 import com.countertap.customer.ui.menu.MenuScreen
-import com.countertap.customer.ui.order.OrderConfirmationScreen
+import com.countertap.customer.ui.order.OrderTrackingScreen
 import com.countertap.customer.ui.scanner.ScannerScreen
 import com.countertap.customer.viewmodel.CartViewModel
 
@@ -25,9 +26,20 @@ fun AppNavGraph(startDestination: String) {
         composable(Routes.SIGN_IN) {
             SignInScreen(
                 onSignInSuccess = {
-                    navController.navigate(Routes.SCANNER) {
+                    navController.navigate(Routes.HOME) {
                         popUpTo(Routes.SIGN_IN) { inclusive = true }
                     }
+                }
+            )
+        }
+
+        composable(Routes.HOME) {
+            CustomerHomeScreen(
+                onOpenMenu = { tenantId ->
+                    navController.navigate(Routes.menu(tenantId))
+                },
+                onScanNew = {
+                    navController.navigate(Routes.SCANNER)
                 }
             )
         }
@@ -35,7 +47,9 @@ fun AppNavGraph(startDestination: String) {
         composable(Routes.SCANNER) {
             ScannerScreen(
                 onScanned = { tenantId ->
-                    navController.navigate(Routes.menu(tenantId))
+                    navController.navigate(Routes.menu(tenantId)) {
+                        popUpTo(Routes.SCANNER) { inclusive = true }
+                    }
                 }
             )
         }
@@ -50,6 +64,11 @@ fun AppNavGraph(startDestination: String) {
             MenuScreen(
                 tenantId = tenantId,
                 onGoToCart = { navController.navigate(Routes.cart(tenantId)) },
+                onChangeRestaurant = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = false }
+                    }
+                },
                 cartViewModel = cartViewModel
             )
         }
@@ -59,7 +78,6 @@ fun AppNavGraph(startDestination: String) {
             arguments = listOf(navArgument("tenantId") { type = NavType.StringType })
         ) { cartEntry ->
             val tenantId = cartEntry.arguments?.getString("tenantId") ?: return@composable
-            // Retrieve the same CartViewModel from the menu entry
             val menuEntry = remember(cartEntry) {
                 navController.getBackStackEntry(Routes.menu(tenantId))
             }
@@ -68,8 +86,8 @@ fun AppNavGraph(startDestination: String) {
                 tenantId = tenantId,
                 onBack = { navController.popBackStack() },
                 onOrderPlaced = { orderId ->
-                    navController.navigate(Routes.orderConfirmed(orderId)) {
-                        popUpTo(Routes.SCANNER) { inclusive = false }
+                    navController.navigate(Routes.orderTracking(tenantId, orderId)) {
+                        popUpTo(Routes.HOME) { inclusive = false }
                     }
                 },
                 viewModel = cartViewModel
@@ -77,15 +95,20 @@ fun AppNavGraph(startDestination: String) {
         }
 
         composable(
-            route = Routes.ORDER_CONFIRMED,
-            arguments = listOf(navArgument("orderId") { type = NavType.StringType })
+            route = Routes.ORDER_TRACKING,
+            arguments = listOf(
+                navArgument("tenantId") { type = NavType.StringType },
+                navArgument("orderId") { type = NavType.StringType }
+            )
         ) { backStackEntry ->
+            val tenantId = backStackEntry.arguments?.getString("tenantId") ?: ""
             val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
-            OrderConfirmationScreen(
+            OrderTrackingScreen(
+                tenantId = tenantId,
                 orderId = orderId,
                 onScanAnother = {
-                    navController.navigate(Routes.SCANNER) {
-                        popUpTo(Routes.SCANNER) { inclusive = true }
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = true }
                     }
                 }
             )
