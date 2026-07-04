@@ -14,7 +14,8 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="CounterTap"
-        android:supportsRtl="true">
+        android:supportsRtl="true"
+        android:theme="@style/Theme.CounterTap">
 
         <activity
             android:name=".MainActivity"

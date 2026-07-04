@@ -5,13 +5,16 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -67,13 +70,20 @@ fun ProductListScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                    .statusBarsPadding()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Menu", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                IconButton(onClick = onManageCategories) {
-                    Icon(Icons.Default.Edit, contentDescription = "Categories", tint = AccentBlue)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(CardBackground)
+                ) {
+                    IconButton(onClick = onManageCategories) {
+                        Icon(Icons.Default.Edit, contentDescription = "Manage Categories", tint = AccentBlue)
+                    }
                 }
             }
         },
@@ -120,14 +130,26 @@ fun ProductListScreen(
                             val products = grouped[category.id] ?: emptyList()
                             if (products.isNotEmpty()) {
                                 item {
-                                    Text(
-                                        text = category.name.uppercase(),
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = AccentBlue,
-                                        letterSpacing = 1.2.sp,
-                                        modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 8.dp)
-                                    )
+                                    Row(
+                                        modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .width(3.dp)
+                                                .height(14.dp)
+                                                .clip(RoundedCornerShape(2.dp))
+                                                .background(AccentBlue)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = category.name.uppercase(),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AccentBlue,
+                                            letterSpacing = 1.5.sp
+                                        )
+                                    }
                                 }
                                 items(products) { product ->
                                     ProductItem(
@@ -142,14 +164,26 @@ fun ProductListScreen(
                         val uncategorized = grouped[""] ?: emptyList()
                         if (uncategorized.isNotEmpty()) {
                             item {
-                                Text(
-                                    text = "UNCATEGORIZED",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TextHint,
-                                    letterSpacing = 1.2.sp,
-                                    modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 8.dp)
-                                )
+                                Row(
+                                    modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .width(3.dp)
+                                            .height(14.dp)
+                                            .clip(RoundedCornerShape(2.dp))
+                                            .background(TextHint)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "UNCATEGORIZED",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextHint,
+                                        letterSpacing = 1.5.sp
+                                    )
+                                }
                             }
                             items(uncategorized) { product ->
                                 ProductItem(
@@ -175,44 +209,61 @@ private fun ProductItem(
     onDelete: () -> Unit,
     onToggle: () -> Unit
 ) {
-    val unavailableAlpha = if (product.available) 1f else 0.5f
+    val dim = if (product.available) 1f else 0.45f
+    val accentColor = if (product.available) AccentBlue else TextHint
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
+            .height(IntrinsicSize.Min)
             .clip(RoundedCornerShape(12.dp))
-            .background(CardBackground)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .background(CardBackground),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Box(
+            modifier = Modifier
+                .width(4.dp)
+                .fillMaxHeight()
+                .background(accentColor.copy(alpha = 0.8f))
+        )
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp, top = 12.dp, bottom = 12.dp)
+        ) {
             Text(
                 text = product.name,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = TextPrimary.copy(alpha = unavailableAlpha),
+                color = TextPrimary.copy(alpha = dim),
                 textDecoration = if (!product.available) TextDecoration.LineThrough else null
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = "₹${product.price.toInt()}",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = AccentBlue.copy(alpha = unavailableAlpha)
             )
             if (product.description.isNotBlank()) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = product.description,
                     fontSize = 12.sp,
-                    color = TextSecondary.copy(alpha = unavailableAlpha),
+                    color = TextSecondary.copy(alpha = dim),
                     maxLines = 1
                 )
             }
+            Spacer(modifier = Modifier.height(6.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(accentColor.copy(alpha = 0.15f))
+                    .padding(horizontal = 8.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = "₹${product.price.toInt()}",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = accentColor
+                )
+            }
         }
-
-        Spacer(modifier = Modifier.width(8.dp))
 
         Switch(
             checked = product.available,
@@ -225,11 +276,11 @@ private fun ProductItem(
             )
         )
 
-        IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+        IconButton(onClick = onEdit, modifier = Modifier.size(38.dp)) {
             Icon(Icons.Default.Edit, contentDescription = "Edit", tint = AccentBlue, modifier = Modifier.size(18.dp))
         }
 
-        IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+        IconButton(onClick = onDelete, modifier = Modifier.size(38.dp)) {
             Icon(Icons.Default.Delete, contentDescription = "Delete", tint = ErrorRed, modifier = Modifier.size(18.dp))
         }
     }

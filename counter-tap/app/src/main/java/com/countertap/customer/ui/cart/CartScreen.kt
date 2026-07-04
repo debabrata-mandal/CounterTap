@@ -4,8 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -47,7 +49,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.countertap.customer.ui.theme.AccentBlue
 import com.countertap.customer.ui.theme.BackgroundDark
 import com.countertap.customer.ui.theme.CardBackground
+import com.countertap.customer.ui.theme.CardElevated
 import com.countertap.customer.ui.theme.DividerColor
+import com.countertap.customer.ui.theme.ErrorRed
 import com.countertap.customer.ui.theme.TextPrimary
 import com.countertap.customer.ui.theme.TextSecondary
 import com.countertap.customer.viewmodel.CartViewModel
@@ -79,53 +83,101 @@ fun CartScreen(
     ) {
         // Top bar
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextPrimary)
             }
-            Text("Your Cart", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Column {
+                Text("Your Cart", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                if (items.isNotEmpty()) {
+                    Text(
+                        "${items.size} item${if (items.size > 1) "s" else ""}",
+                        fontSize = 12.sp,
+                        color = TextSecondary
+                    )
+                }
+            }
         }
 
+        // Cart items
         LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
             items(items) { cartItem ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(CardBackground)
-                        .padding(12.dp),
+                        .padding(vertical = 4.dp)
+                        .height(IntrinsicSize.Min)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(CardBackground),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(cartItem.product.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                        Text("₹${cartItem.product.price.toInt()} each", fontSize = 12.sp, color = TextSecondary)
+                    Box(
+                        modifier = Modifier
+                            .width(4.dp)
+                            .fillMaxHeight()
+                            .background(AccentBlue.copy(alpha = 0.7f))
+                    )
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 12.dp, top = 12.dp, bottom = 12.dp)
+                    ) {
+                        Text(
+                            cartItem.product.name,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            "₹${cartItem.product.price.toInt()} each",
+                            fontSize = 12.sp,
+                            color = TextSecondary
+                        )
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { viewModel.remove(cartItem.product) }, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.Remove, contentDescription = "Remove", tint = AccentBlue)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(CardElevated)
+                    ) {
+                        IconButton(
+                            onClick = { viewModel.remove(cartItem.product) },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(Icons.Default.Remove, contentDescription = "Remove", tint = AccentBlue, modifier = Modifier.size(16.dp))
                         }
                         Text(
                             cartItem.quantity.toString(),
-                            fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
-                            modifier = Modifier.padding(horizontal = 4.dp)
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                            modifier = Modifier.padding(horizontal = 2.dp)
                         )
-                        IconButton(onClick = { viewModel.add(cartItem.product) }, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.Add, contentDescription = "Add", tint = AccentBlue)
+                        IconButton(
+                            onClick = { viewModel.add(cartItem.product) },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Add", tint = AccentBlue, modifier = Modifier.size(16.dp))
                         }
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         "₹${(cartItem.product.price * cartItem.quantity).toInt()}",
-                        fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AccentBlue
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AccentBlue,
+                        modifier = Modifier.padding(end = 12.dp)
                     )
                 }
             }
 
             item {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
                 OutlinedTextField(
                     value = note,
                     onValueChange = { note = it },
@@ -140,40 +192,71 @@ fun CartScreen(
                         unfocusedTextColor = TextPrimary
                     )
                 )
-                Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider(color = DividerColor)
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Total", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                    Text("₹${viewModel.totalAmount.toInt()}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = AccentBlue)
-                }
                 Spacer(modifier = Modifier.height(80.dp))
             }
         }
 
-        // Place order button
-        Box(modifier = Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding()) {
-            if (orderState is OrderState.Placing) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = AccentBlue)
-            } else {
+        // Summary + place order
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                .background(CardBackground)
+                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .navigationBarsPadding()
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Column {
-                    if (orderState is OrderState.Error) {
-                        Text(
-                            (orderState as OrderState.Error).message,
-                            color = com.countertap.customer.ui.theme.ErrorRed,
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                    }
-                    Button(
-                        onClick = { viewModel.placeOrder(tenantId, note) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
-                        shape = RoundedCornerShape(12.dp),
-                        enabled = items.isNotEmpty()
-                    ) {
-                        Text("Place Order  •  ₹${viewModel.totalAmount.toInt()}", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    }
+                    Text("Total amount", fontSize = 12.sp, color = TextSecondary)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        "₹${viewModel.totalAmount.toInt()}",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AccentBlue
+                    )
+                }
+                Text(
+                    "${items.sumOf { it.quantity }} items",
+                    fontSize = 13.sp,
+                    color = TextSecondary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (orderState is OrderState.Error) {
+                Text(
+                    (orderState as OrderState.Error).message,
+                    color = ErrorRed,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            if (orderState is OrderState.Placing) {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = AccentBlue)
+                }
+            } else {
+                Button(
+                    onClick = { viewModel.placeOrder(tenantId, note) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = items.isNotEmpty()
+                ) {
+                    Text(
+                        "Place Order",
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
                 }
             }
         }

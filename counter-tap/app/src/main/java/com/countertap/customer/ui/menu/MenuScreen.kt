@@ -4,15 +4,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,7 +27,6 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -42,6 +44,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.countertap.customer.ui.theme.AccentBlue
 import com.countertap.customer.ui.theme.BackgroundDark
 import com.countertap.customer.ui.theme.CardBackground
+import com.countertap.customer.ui.theme.CardElevated
 import com.countertap.customer.ui.theme.TextPrimary
 import com.countertap.customer.ui.theme.TextSecondary
 import com.countertap.customer.viewmodel.CartViewModel
@@ -56,7 +59,6 @@ fun MenuScreen(
     cartViewModel: CartViewModel = hiltViewModel()
 ) {
     val uiState by menuViewModel.uiState.collectAsState()
-    val cartItems by cartViewModel.items.collectAsState()
     val cartCount = cartViewModel.totalCount
 
     LaunchedEffect(tenantId) { menuViewModel.loadShop(tenantId) }
@@ -74,11 +76,12 @@ fun MenuScreen(
             ) {
                 Text(
                     text = uiState.shop?.name ?: "Loading…",
-                    fontSize = 20.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
                 )
                 if (uiState.shop?.address?.isNotBlank() == true) {
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = uiState.shop!!.address,
                         fontSize = 13.sp,
@@ -120,14 +123,7 @@ fun MenuScreen(
                                 val products = grouped[category.id] ?: emptyList()
                                 if (products.isNotEmpty()) {
                                     item {
-                                        Text(
-                                            text = category.name.uppercase(),
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = AccentBlue,
-                                            letterSpacing = 1.2.sp,
-                                            modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 8.dp)
-                                        )
+                                        CategoryHeader(category.name)
                                     }
                                     items(products) { product ->
                                         ProductCard(
@@ -141,16 +137,7 @@ fun MenuScreen(
                             }
                             if (uncategorized.isNotEmpty()) {
                                 if (uiState.categories.isNotEmpty()) {
-                                    item {
-                                        Text(
-                                            text = "OTHER",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = AccentBlue,
-                                            letterSpacing = 1.2.sp,
-                                            modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 8.dp)
-                                        )
-                                    }
+                                    item { CategoryHeader("OTHER") }
                                 }
                                 items(uncategorized) { product ->
                                     ProductCard(
@@ -161,14 +148,14 @@ fun MenuScreen(
                                     )
                                 }
                             }
-                            item { Spacer(modifier = Modifier.height(88.dp)) }
+                            item { Spacer(modifier = Modifier.height(96.dp)) }
                         }
                     }
                 }
             }
         }
 
-        // Cart FAB
+        // Cart bar
         if (cartCount > 0) {
             Button(
                 onClick = onGoToCart,
@@ -193,6 +180,30 @@ fun MenuScreen(
 }
 
 @Composable
+private fun CategoryHeader(name: String) {
+    Row(
+        modifier = Modifier.padding(start = 20.dp, top = 24.dp, bottom = 10.dp, end = 20.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .height(14.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(AccentBlue)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = name.uppercase(),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = AccentBlue,
+            letterSpacing = 1.5.sp
+        )
+    }
+}
+
+@Composable
 private fun ProductCard(
     product: Product,
     quantity: Int,
@@ -203,22 +214,55 @@ private fun ProductCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
+            .height(IntrinsicSize.Min)
             .clip(RoundedCornerShape(12.dp))
-            .background(CardBackground)
-            .padding(12.dp),
+            .background(CardBackground),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = product.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(text = "₹${product.price.toInt()}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AccentBlue)
+        Box(
+            modifier = Modifier
+                .width(4.dp)
+                .fillMaxHeight()
+                .background(AccentBlue.copy(alpha = 0.7f))
+        )
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp, top = 14.dp, bottom = 14.dp)
+        ) {
+            Text(
+                text = product.name,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary
+            )
             if (product.description.isNotBlank()) {
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(text = product.description, fontSize = 12.sp, color = TextSecondary, maxLines = 1)
+                Text(
+                    text = product.description,
+                    fontSize = 12.sp,
+                    color = TextSecondary,
+                    maxLines = 1
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(AccentBlue.copy(alpha = 0.15f))
+                    .padding(horizontal = 8.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = "₹${product.price.toInt()}",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AccentBlue
+                )
             }
         }
 
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
         if (quantity == 0) {
             Button(
@@ -230,21 +274,28 @@ private fun ProductCard(
                 Text("ADD", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
             }
         } else {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Remove, contentDescription = "Remove", tint = AccentBlue)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(CardElevated)
+            ) {
+                IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Default.Remove, contentDescription = "Remove", tint = AccentBlue, modifier = Modifier.size(16.dp))
                 }
                 Text(
                     text = quantity.toString(),
-                    fontSize = 16.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary,
-                    modifier = Modifier.padding(horizontal = 4.dp)
+                    modifier = Modifier.padding(horizontal = 2.dp)
                 )
-                IconButton(onClick = onAdd, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Add, contentDescription = "Add", tint = AccentBlue)
+                IconButton(onClick = onAdd, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Default.Add, contentDescription = "Add", tint = AccentBlue, modifier = Modifier.size(16.dp))
                 }
             }
         }
+
+        Spacer(modifier = Modifier.width(12.dp))
     }
 }

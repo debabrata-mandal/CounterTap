@@ -10,18 +10,18 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
@@ -33,6 +33,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
@@ -69,50 +72,87 @@ fun ScannerScreen(onScanned: (String) -> Unit) {
         }
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize().background(BackgroundDark),
-        contentAlignment = Alignment.Center
-    ) {
+    Box(modifier = Modifier.fillMaxSize().background(BackgroundDark)) {
         if (hasCameraPermission) {
             CameraPreview(onScanned = onScanned)
-            // Viewfinder overlay
+
+            // Dimmed overlay — top
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.45f))
+            )
+
+            // Viewfinder cutout + corner markers
             Column(
                 modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Spacer(modifier = Modifier.weight(1f))
-                Box(
-                    modifier = Modifier
-                        .size(240.dp)
-                        .border(2.dp, AccentBlue, RoundedCornerShape(16.dp))
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(
-                    text = "Point at a shop QR code",
-                    color = TextSecondary,
-                    fontSize = 14.sp,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.weight(1f))
+                val cornerColor = AccentBlue
+                Canvas(modifier = Modifier.size(240.dp)) {
+                    val stroke = 4.dp.toPx()
+                    val arm = 36.dp.toPx()
+                    val w = size.width
+                    val h = size.height
+
+                    // Top-left
+                    drawLine(cornerColor, Offset(0f, arm), Offset(0f, 0f), stroke, StrokeCap.Round)
+                    drawLine(cornerColor, Offset(0f, 0f), Offset(arm, 0f), stroke, StrokeCap.Round)
+                    // Top-right
+                    drawLine(cornerColor, Offset(w - arm, 0f), Offset(w, 0f), stroke, StrokeCap.Round)
+                    drawLine(cornerColor, Offset(w, 0f), Offset(w, arm), stroke, StrokeCap.Round)
+                    // Bottom-left
+                    drawLine(cornerColor, Offset(0f, h - arm), Offset(0f, h), stroke, StrokeCap.Round)
+                    drawLine(cornerColor, Offset(0f, h), Offset(arm, h), stroke, StrokeCap.Round)
+                    // Bottom-right
+                    drawLine(cornerColor, Offset(w - arm, h), Offset(w, h), stroke, StrokeCap.Round)
+                    drawLine(cornerColor, Offset(w, h - arm), Offset(w, h), stroke, StrokeCap.Round)
+                }
             }
-            Text(
-                text = "Scan Shop QR",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary,
+
+            // Header
+            Column(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .statusBarsPadding()
-                    .padding(top = 8.dp)
-            )
-        } else {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(32.dp)
+                    .padding(top = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Camera permission is needed to scan QR codes",
+                    text = "Scan Shop QR",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+            }
+
+            // Footer
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = 40.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Point your camera at the\nshop QR code to order",
+                    color = TextSecondary,
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 20.sp
+                )
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Camera permission needed to scan QR codes",
                     color = TextSecondary,
                     textAlign = TextAlign.Center,
                     fontSize = 15.sp
