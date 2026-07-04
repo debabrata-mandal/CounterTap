@@ -1,6 +1,7 @@
 package com.countertap.business.ui.menu
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,6 +62,7 @@ fun ProductListScreen(
 
     Scaffold(
         containerColor = BackgroundDark,
+        contentWindowInsets = WindowInsets(0),
         topBar = {
             Row(
                 modifier = Modifier
