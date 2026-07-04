@@ -12,6 +12,10 @@
 *.aab
 *.ap_
 
+# Build outputs — all modules
+build/
+**/build/
+
 # Generated files
 bin/
 gen/
