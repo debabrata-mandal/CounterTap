@@ -1,5 +1,8 @@
 package com.countertap.business.viewmodel
 
+import android.content.Context
+import android.media.RingtoneManager
+import android.speech.tts.TextToSpeech
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.countertap.business.repository.OrderRepository
@@ -8,10 +11,12 @@ import com.countertap.shared.Order
 import com.countertap.shared.OrderStatus
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.Locale
 import javax.inject.Inject
 
 data class OrdersUiState(
@@ -36,6 +41,7 @@ private val ACTIVE_STATUSES = setOf(
 
 @HiltViewModel
 class OrdersViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val auth: FirebaseAuth,
     private val tenantRepository: TenantRepository,
     private val orderRepository: OrderRepository
@@ -45,8 +51,16 @@ class OrdersViewModel @Inject constructor(
     val uiState: StateFlow<OrdersUiState> = _uiState.asStateFlow()
 
     private var tenantId: String? = null
+    private var knownOrderIds = emptySet<String>()
+    private var isFirstLoad = true
+    private var tts: TextToSpeech? = null
+    private var ttsReady = false
 
     init {
+        tts = TextToSpeech(context) { status ->
+            ttsReady = status == TextToSpeech.SUCCESS
+            if (ttsReady) tts?.language = Locale.ENGLISH
+        }
         loadOrders()
     }
 
@@ -70,12 +84,46 @@ class OrdersViewModel @Inject constructor(
                     val done = orders
                         .filter { it.status !in ACTIVE_STATUSES }
                         .sortedByDescending { it.createdAt }
+
+                    val currentIds = orders.map { it.id }.toSet()
+                    if (!isFirstLoad) {
+                        val newOrders = orders.filter { it.id in (currentIds - knownOrderIds) }
+                        if (newOrders.isNotEmpty()) alertNewOrder(newOrders)
+                    }
+                    isFirstLoad = false
+                    knownOrderIds = currentIds
+
                     _uiState.value = OrdersUiState(isLoading = false, activeOrders = active, doneOrders = done)
                 }
             } catch (e: Exception) {
                 _uiState.value = OrdersUiState(isLoading = false, error = e.message ?: "Failed to load orders")
             }
         }
+    }
+
+    private fun alertNewOrder(newOrders: List<Order>) {
+        // Play notification sound first
+        try {
+            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            RingtoneManager.getRingtone(context, uri)?.play()
+        } catch (_: Exception) {}
+
+        // Speak each new order
+        if (ttsReady) {
+            newOrders.forEach { order ->
+                val itemCount = order.items.sumOf { it.quantity }
+                val name = order.customerName.ifBlank { "a customer" }
+                val amount = order.totalAmount.toInt()
+                val text = "New order from $name. $itemCount item${if (itemCount > 1) "s" else ""}. Total $amount rupees."
+                tts?.speak(text, TextToSpeech.QUEUE_ADD, null, order.id)
+            }
+        }
+    }
+
+    override fun onCleared() {
+        tts?.stop()
+        tts?.shutdown()
+        super.onCleared()
     }
 
     fun updateStatus(orderId: String, customerId: String, newStatus: String) {
