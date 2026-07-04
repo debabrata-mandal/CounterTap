@@ -29,13 +29,18 @@ class OrderRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    suspend fun updateStatus(tenantId: String, orderId: String, newStatus: String) {
-        firestore
-            .collection("tenants")
-            .document(tenantId)
-            .collection("orders")
-            .document(orderId)
-            .update("status", newStatus)
-            .await()
+    suspend fun updateStatus(tenantId: String, orderId: String, customerId: String, newStatus: String) {
+        val batch = firestore.batch()
+        batch.update(
+            firestore.collection("tenants").document(tenantId).collection("orders").document(orderId),
+            "status", newStatus
+        )
+        if (customerId.isNotBlank()) {
+            batch.update(
+                firestore.collection("users").document(customerId).collection("orders").document(orderId),
+                "status", newStatus
+            )
+        }
+        batch.commit().await()
     }
 }

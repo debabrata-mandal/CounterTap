@@ -21,12 +21,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,6 +55,7 @@ import com.countertap.customer.viewmodel.CustomerHomeViewModel
 fun CustomerHomeScreen(
     onOpenMenu: (tenantId: String) -> Unit,
     onScanNew: () -> Unit,
+    onViewHistory: () -> Unit,
     viewModel: CustomerHomeViewModel = hiltViewModel()
 ) {
     LaunchedEffect(Unit) { viewModel.refresh() }
@@ -69,21 +72,37 @@ fun CustomerHomeScreen(
                 .statusBarsPadding()
         ) {
             // Header
-            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp)) {
-                if (state.userName.isNotBlank()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    if (state.userName.isNotBlank()) {
+                        Text(
+                            "Hi, ${state.userName}",
+                            fontSize = 14.sp,
+                            color = TextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                    }
                     Text(
-                        "Hi, ${state.userName}",
-                        fontSize = 14.sp,
-                        color = TextSecondary
+                        "Where are you ordering from?",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
                     )
-                    Spacer(modifier = Modifier.height(2.dp))
                 }
-                Text(
-                    "Where are you ordering from?",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
+                IconButton(onClick = onViewHistory) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ReceiptLong,
+                        contentDescription = "My Orders",
+                        tint = AccentBlue,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
 
             if (state.recentShops.isEmpty()) {

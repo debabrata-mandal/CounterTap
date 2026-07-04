@@ -3,6 +3,7 @@ package com.countertap.customer.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.countertap.customer.repository.OrderRepository
+import com.countertap.customer.repository.ShopHistoryRepository
 import com.countertap.shared.Order
 import com.countertap.shared.OrderItem
 import com.countertap.shared.OrderStatus
@@ -27,6 +28,7 @@ sealed class OrderState {
 @HiltViewModel
 class CartViewModel @Inject constructor(
     private val orderRepository: OrderRepository,
+    private val shopHistory: ShopHistoryRepository,
     private val auth: FirebaseAuth
 ) : ViewModel() {
 
@@ -85,6 +87,8 @@ class CartViewModel @Inject constructor(
                     note = note
                 )
                 val orderId = orderRepository.placeOrder(tenantId, order)
+                val shopName = shopHistory.getRecentShops().find { it.tenantId == tenantId }?.name ?: ""
+                orderRepository.saveToUserHistory(user.uid, orderId, tenantId, shopName, order)
                 _items.value = emptyList()
                 _orderState.value = OrderState.Success(orderId)
             } catch (e: Exception) {

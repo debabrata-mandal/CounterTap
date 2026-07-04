@@ -104,10 +104,10 @@ fun OrdersScreen(viewModel: OrdersViewModel = hiltViewModel()) {
                     items(uiState.activeOrders, key = { it.id }) { order ->
                         OrderCard(
                             order = order,
-                            onAccept = { viewModel.updateStatus(order.id, OrderStatus.CONFIRMED) },
-                            onReject = { viewModel.updateStatus(order.id, OrderStatus.CANCELLED) },
-                            onReady = { viewModel.updateStatus(order.id, OrderStatus.READY) },
-                            onComplete = { viewModel.updateStatus(order.id, OrderStatus.COMPLETED) }
+                            onAccept = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.CONFIRMED) },
+                            onReject = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.CANCELLED) },
+                            onReady = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.READY) },
+                            onComplete = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.COMPLETED) }
                         )
                     }
                 }
