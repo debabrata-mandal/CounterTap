@@ -56,7 +56,7 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 
 ## Current Phase
 
-**Phase 3 — Customer App (COMPLETE)**
+**Phase 4 — UI Redesign (COMPLETE)**
 
 ## Completed Work
 
@@ -92,11 +92,24 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 - [x] CartViewModel shared between Menu and Cart via nav back-stack scoping
 - [x] Full nav graph: SIGN_IN → SCANNER → MENU/{tenantId} → CART/{tenantId} → ORDER_CONFIRMED/{orderId}
 
-## Phase 4 — Next Steps
-- [ ] Business app Orders tab — real-time Firestore listener for incoming orders
+## Phase 4 — Next Steps (priority order)
+
+### UI Redesign ✅ (dark premium style)
+- [x] Fix system ActionBar: `res/values/themes.xml` (NoActionBar) + `android:theme` in both manifests
+- [x] Business app HomeScreen — Column pattern + animated tab nav (AccentBlue glow pill, ReceiptLong/List/QrCode)
+- [x] Business app ProductListScreen — left accent bar + price badge chip; dim+strikethrough for unavailable
+- [x] Customer app MenuScreen — vertical-rule category headers + accent-bar product cards with price chip
+- [x] Customer app CartScreen — accent-bar cart items + raised summary footer (total + Place Order)
+- [x] Customer app ScannerScreen — 4-corner L-marker viewfinder + dimmed overlay
+- [x] Customer app OrderConfirmationScreen — concentric glow rings + order ID card
+
+### Feature: Live Orders (business app) — NEXT
+- [ ] Orders tab — real-time Firestore listener for incoming orders
 - [ ] Order cards: show items, customer name, total; accept/reject actions
 - [ ] Update order status in Firestore (PENDING → CONFIRMED → READY etc.)
-- [ ] Phase 5: UPI deep link payment (customer pays after order confirmed)
+
+### Phase 5
+- [ ] UPI deep link payment (customer pays after order confirmed)
 
 ## Key Decisions Made
 
@@ -108,6 +121,7 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 6. **OrderStatus** as String constants (not enum) for Firestore compatibility
 7. **guava:32.1.2-android** added to customer app — required for CameraX `ListenableFuture` compile access
 8. **ML Kit barcode filter** — use `rawValue != null` not `TYPE_TEXT`; Firestore IDs are classified as TYPE_UNKNOWN
+9. **Left accent bar pattern** — use `Row` + `height(IntrinsicSize.Min)` + `Box(Modifier.width(4.dp).fillMaxHeight())` for left border in card items; never use `fillMaxHeight()` inside a wrapping `Box` (gives 0 or unbounded height in lazy lists)
 
 ## CRITICAL: Bottom Nav / Inset Rule
 
