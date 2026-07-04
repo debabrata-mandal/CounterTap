@@ -46,9 +46,9 @@ Local: C:\Github\default\CounterTap
 
 ```
 tenants/{tenantId}/
-  products/{productId}     — Product data
-  orders/{orderId}         — Order data
-  categories/{categoryId}  — Menu categories
+  products/{productId}     — Product data (available:bool, categoryId:string)
+  orders/{orderId}         — Order data (status, paymentStatus, note, items[])
+  categories/{categoryId}  — Menu categories (name, order:int)
 users/{userId}             — User profile
 ```
 
@@ -56,37 +56,47 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 
 ## Current Phase
 
-**Phase 1 — Scaffolding (IN PROGRESS)**
+**Phase 3 — Customer App (COMPLETE)**
 
-Setup steps completed:
-- [x] GitHub repo created and pushed
-- [x] Firebase project countertap-dev created (Blaze)
-- [x] Both Android apps registered in Firebase
-- [x] Google Sign-In enabled in Firebase Auth
-- [x] Firestore database created (asia-south1, test mode)
-- [x] Firebase Storage created (test mode)
-- [x] Android Studio installed, project opened
-- [x] Both app modules scaffolded (build.gradle.kts, AndroidManifest, MainActivity, App class)
-- [x] Shared module scaffolded with data models
-- [x] Gradle wrapper created (gradle-wrapper.properties → Gradle 8.11.1)
-- [x] Gradle sync passing cleanly
-- [x] SHA-1 fingerprint added to Firebase (A1:AF:E7:FD:AD:05:C8:BF:09:3E:FC:BF:5E:E6:11:86:38:84:E8:8B)
-- [x] google-services.json correct for both apps (both contain SHA-1 for both packages)
+## Completed Work
+
+### Phase 1 — Scaffolding ✅
+- [x] GitHub repo, Firebase project, both apps registered
+- [x] Google Sign-In, Firestore, Storage configured
+- [x] Gradle wrapper (8.11.1), sync passing
+- [x] SHA-1 fingerprint added to Firebase
+- [x] google-services.json in place (gitignored)
 - [ ] GitHub Secrets set up (GOOGLE_SERVICES_JSON_BUSINESS, GOOGLE_SERVICES_JSON_CUSTOMER, KEYSTORE_FILE, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD)
 
-## Phase 1 Coding — Completed
-- [x] Google Sign-In auth screen — business app (`ui/auth/SignInScreen.kt`)
-- [x] Google Sign-In auth screen — customer app (`ui/auth/SignInScreen.kt`)
-- [x] Hilt modules — `di/AppModule.kt` in both apps (FirebaseAuth, Firestore, Storage)
-- [x] Navigation graphs — `navigation/NavGraph.kt` in both apps (sign_in → home)
-- [x] Base ViewModels — `viewmodel/AuthViewModel.kt` in both apps
+### Phase 1 Coding ✅
+- [x] Google Sign-In auth screen — both apps (`ui/auth/SignInScreen.kt`)
+- [x] Hilt modules — `di/AppModule.kt` in both apps
+- [x] Navigation graphs — both apps
+- [x] AuthViewModel — both apps
 
-## Phase 2 — Next Steps
-- [ ] Shop onboarding screen (business app) — shop name, address, phone, logo upload
-- [ ] UPI setup screen (business app)
-- [ ] After sign-in: check Firestore for existing tenant doc; route to onboarding or home
-- [ ] Add/edit/delete products and categories (business app)
-- [ ] QR code generation screen (business app)
+### Phase 2 — Business App ✅
+- [x] Shop onboarding screen (`ui/onboarding/ShopSetupScreen.kt`)
+- [x] UPI setup screen (`ui/onboarding/UpiSetupScreen.kt`)
+- [x] Loading screen — checks Firestore, routes to onboarding or home
+- [x] Product list screen with category grouping (`ui/menu/ProductListScreen.kt`)
+- [x] Add/edit product screen (`ui/menu/AddEditProductScreen.kt`)
+- [x] Category management screen (`ui/menu/CategoryScreen.kt`)
+- [x] QR code generation + share (`ui/qr/QrCodeScreen.kt`) — encodes tenantId
+- [x] Home screen with Orders / Menu / QR tabs (bottom nav, no overlap)
+
+### Phase 3 — Customer App ✅
+- [x] QR scanner (`ui/scanner/ScannerScreen.kt`) — CameraX + ML Kit
+- [x] Menu screen (`ui/menu/MenuScreen.kt`) — shop header, products grouped by category; uncategorized products shown as fallback
+- [x] Cart screen (`ui/cart/CartScreen.kt`) — quantity controls, note, place order
+- [x] Order confirmation screen (`ui/order/OrderConfirmationScreen.kt`)
+- [x] CartViewModel shared between Menu and Cart via nav back-stack scoping
+- [x] Full nav graph: SIGN_IN → SCANNER → MENU/{tenantId} → CART/{tenantId} → ORDER_CONFIRMED/{orderId}
+
+## Phase 4 — Next Steps
+- [ ] Business app Orders tab — real-time Firestore listener for incoming orders
+- [ ] Order cards: show items, customer name, total; accept/reject actions
+- [ ] Update order status in Firestore (PENDING → CONFIRMED → READY etc.)
+- [ ] Phase 5: UPI deep link payment (customer pays after order confirmed)
 
 ## Key Decisions Made
 
@@ -96,6 +106,26 @@ Setup steps completed:
 4. **Monorepo** — both apps + shared module in one repo
 5. **KAPT** for Hilt (can migrate to KSP later)
 6. **OrderStatus** as String constants (not enum) for Firestore compatibility
+7. **guava:32.1.2-android** added to customer app — required for CameraX `ListenableFuture` compile access
+8. **ML Kit barcode filter** — use `rawValue != null` not `TYPE_TEXT`; Firestore IDs are classified as TYPE_UNKNOWN
+
+## CRITICAL: Bottom Nav / Inset Rule
+
+**Never use nested Scaffold for tab screens.** The correct pattern for any screen with bottom navigation:
+
+```kotlin
+Column(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.weight(1f)) { /* tab content */ }
+    NavigationBar(
+        modifier = Modifier.fillMaxWidth().navigationBarsPadding(),
+        windowInsets = WindowInsets(0)
+    )
+}
+```
+
+Inner Scaffolds (e.g. ProductListScreen) must use `contentWindowInsets = WindowInsets(0)`.
+
+For full-screen screens without bottom nav, add `statusBarsPadding()` to the top element so content doesn't hide behind the status bar.
 
 ## CI/CD
 
@@ -105,6 +135,6 @@ Setup steps completed:
 
 ## How to Resume in a New Session
 
-1. Read this file + PLAN.md
-2. Check current state of the code in the repo
-3. Continue from "Next steps" above
+1. Read this file
+2. Check git log for latest commit
+3. Continue from "Next Steps" in Phase 4 above
