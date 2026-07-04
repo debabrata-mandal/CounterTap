@@ -52,6 +52,8 @@ data class Shop(
     @DocumentId val id: String = "",
     val ownerId: String = "",
     val name: String = "",
+    val address: String = "",
+    val phone: String = "",
     val upiId: String = "",
     val logoUrl: String = "",
     val active: Boolean = true

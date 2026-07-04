@@ -24,7 +24,7 @@ class MainActivity : ComponentActivity() {
             MaterialTheme {
                 Surface {
                     val startDestination = if (authViewModel.currentUser != null) {
-                        Routes.HOME
+                        Routes.LOADING  // already signed in — check for tenant doc
                     } else {
                         Routes.SIGN_IN
                     }
