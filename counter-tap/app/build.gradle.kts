@@ -90,11 +90,14 @@ dependencies {
 
     implementation(libs.coil.compose)
 
+    implementation(libs.androidx.compose.material.icons.extended)
+
     // QR scanning (customer app only)
     implementation(libs.mlkit.barcode.scanning)
     implementation(libs.camerax.camera2)
     implementation(libs.camerax.lifecycle)
     implementation(libs.camerax.view)
+    implementation("com.google.guava:guava:32.1.2-android")
 
     implementation(project(":shared"))
 

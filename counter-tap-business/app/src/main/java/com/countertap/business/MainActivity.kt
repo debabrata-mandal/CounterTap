@@ -5,7 +5,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
 import com.countertap.business.navigation.AppNavGraph
 import com.countertap.business.navigation.Routes
 import com.countertap.business.ui.theme.CounterTapTheme
@@ -22,7 +24,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             CounterTapTheme {
-                Surface {
+                Surface(modifier = Modifier.fillMaxSize()) {
                     val startDestination = if (authViewModel.currentUser != null) {
                         Routes.LOADING  // already signed in — check for tenant doc
                     } else {

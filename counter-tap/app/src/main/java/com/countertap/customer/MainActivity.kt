@@ -24,7 +24,7 @@ class MainActivity : ComponentActivity() {
             CounterTapTheme {
                 Surface {
                     val startDestination = if (authViewModel.currentUser != null) {
-                        Routes.HOME
+                        Routes.SCANNER
                     } else {
                         Routes.SIGN_IN
                     }

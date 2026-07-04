@@ -28,7 +28,9 @@ data class Order(
     val items: List<OrderItem> = emptyList(),
     val totalAmount: Double = 0.0,
     val status: String = OrderStatus.PENDING,
+    val paymentStatus: String = "unpaid",
     val upiTransactionId: String = "",
+    val note: String = "",
     @ServerTimestamp val createdAt: Date? = null
 )
 
