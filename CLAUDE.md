@@ -47,16 +47,18 @@ Local: C:\Github\default\CounterTap
 ```
 tenants/{tenantId}/
   products/{productId}     — Product data (available:bool, categoryId:string)
-  orders/{orderId}         — Order data (status, paymentStatus, note, items[])
+  orders/{orderId}         — Order data (status, paymentStatus, note, items[], customerId)
   categories/{categoryId}  — Menu categories (name, order:int)
-users/{userId}             — User profile
+users/{userId}/
+  fcmToken                 — FCM device token (saved by business app on startup)
+  orders/{orderId}         — UserOrderSummary: tenantId, shopName, status, totalAmount, items, note, createdAt
 ```
 
 Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 
 ## Current Phase
 
-**Phase 4 — UI Redesign (COMPLETE)**
+**Phase 5 — Live Orders + Order History + FCM (COMPLETE)**
 
 ## Completed Work
 
@@ -103,13 +105,27 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 - [x] Customer app ScannerScreen — 4-corner L-marker viewfinder + dimmed overlay
 - [x] Customer app OrderConfirmationScreen — concentric glow rings + order ID card
 
-### Feature: Live Orders (business app) — NEXT
-- [ ] Orders tab — real-time Firestore listener for incoming orders
-- [ ] Order cards: show items, customer name, total; accept/reject actions
-- [ ] Update order status in Firestore (PENDING → CONFIRMED → READY etc.)
+### Feature: Live Orders (business app) ✅
+- [x] Orders tab — real-time Firestore listener for incoming orders (`repository/OrderRepository.kt`)
+- [x] Order cards: show items, customer name, total; accept/reject actions (`ui/orders/OrdersScreen.kt`)
+- [x] Update order status in Firestore via batch write — syncs to `users/{customerId}/orders/` too
+
+### Feature: Customer Order History ✅
+- [x] `UserOrderSummary` saved to `users/{uid}/orders/` on order placement
+- [x] `OrderHistoryScreen` — real-time status updates, dark premium cards (`ui/orders/OrderHistoryScreen.kt`)
+- [x] "My Orders" icon button on customer home screen
+- [x] Routes: `ORDER_HISTORY = "order_history"`
+
+### Feature: FCM Push Notifications ✅
+- [x] Business app `CounterTapMessagingService` — handles token refresh + incoming messages
+- [x] Business app saves FCM token to `users/{uid}.fcmToken` on startup (`MainActivity.kt`)
+- [x] `POST_NOTIFICATIONS` permission requested on Android 13+
+- [x] Cloud Function `notifyNewOrder` in `functions/index.js` — triggers on order creation
+- [ ] **Deploy Cloud Functions**: `cd functions && npm install && firebase deploy --only functions`
 
 ### Phase 5
 - [ ] UPI deep link payment (customer pays after order confirmed)
+- [ ] Firestore security rules (lock down rules from test mode before production)
 
 ## Key Decisions Made
 
@@ -121,6 +137,8 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 6. **OrderStatus** as String constants (not enum) for Firestore compatibility
 7. **guava:32.1.2-android** added to customer app — required for CameraX `ListenableFuture` compile access
 8. **ML Kit barcode filter** — use `rawValue != null` not `TYPE_TEXT`; Firestore IDs are classified as TYPE_UNKNOWN
+10. **FCM token storage** — business app saves token to `users/{uid}.fcmToken` using `SetOptions.merge()` so it doesn't overwrite other user fields; `CounterTapMessagingService.onNewToken()` also updates it when the token rotates
+11. **Cloud Function** — `functions/index.js` at repo root; uses Firebase Functions v2 (`onDocumentCreated`); requires Node 20; deploy with `firebase deploy --only functions` from `functions/` dir
 9. **Left accent bar pattern** — use `Row` + `height(IntrinsicSize.Min)` + `Box(Modifier.width(4.dp).fillMaxHeight())` for left border in card items; never use `fillMaxHeight()` inside a wrapping `Box` (gives 0 or unbounded height in lazy lists)
 
 ## CRITICAL: Bottom Nav / Inset Rule
@@ -151,4 +169,5 @@ For full-screen screens without bottom nav, add `statusBarsPadding()` to the top
 
 1. Read this file
 2. Check git log for latest commit
-3. Continue from "Next Steps" in Phase 4 above
+3. Continue from Phase 5 next steps above
+4. **Pending manual step**: Deploy Cloud Functions (`cd functions && npm install && firebase deploy --only functions`)
