@@ -94,16 +94,16 @@ fun CustomerHomeScreen(
                         verticalAlignment = Alignment.Top
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            if (state.userName.isNotBlank()) {
-                                Text(
-                                    "Hi, ${state.userName}",
-                                    fontSize = 14.sp,
-                                    color = TextSecondary
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
+                            val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+                            val greeting = when {
+                                hour < 12 -> "Good morning"
+                                hour < 17 -> "Good afternoon"
+                                else -> "Good evening"
                             }
+                            Text(greeting, fontSize = 12.sp, color = TextSecondary)
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                "Where are you ordering from?",
+                                state.userName.ifBlank { "Welcome" },
                                 fontSize = 22.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary
@@ -279,45 +279,60 @@ private fun ActiveOrderCard(info: ActiveOrderInfo, onClick: () -> Unit) {
 
         val stepLabels = listOf("Placed", "Confirmed", "Ready", "Done")
 
+        // Dots + connecting lines row
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            stepLabels.forEachIndexed { index, label ->
+            stepLabels.forEachIndexed { index, _ ->
                 val isDone = index < currentStep
                 val isCurrent = index == currentStep
-
                 val dotColor = when {
                     isDone -> SuccessGreen
                     isCurrent -> AccentBlue
                     else -> DividerColor
                 }
-
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(dotColor)
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        label,
-                        fontSize = 9.sp,
-                        color = if (isDone || isCurrent) dotColor else TextHint,
-                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal
-                    )
-                }
-
+                Box(
+                    modifier = Modifier
+                        .size(9.dp)
+                        .clip(CircleShape)
+                        .background(dotColor)
+                )
                 if (index < stepLabels.lastIndex) {
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(2.dp)
-                            .padding(bottom = 14.dp)
+                            .height(1.5.dp)
                             .background(if (isDone) SuccessGreen else DividerColor)
                     )
                 }
+            }
+        }
+
+        Spacer(Modifier.height(5.dp))
+
+        // Labels row — separate from dots so alignment is clean
+        Row(modifier = Modifier.fillMaxWidth()) {
+            stepLabels.forEachIndexed { index, label ->
+                val isDone = index < currentStep
+                val isCurrent = index == currentStep
+                val color = when {
+                    isDone -> SuccessGreen
+                    isCurrent -> AccentBlue
+                    else -> TextHint
+                }
+                Text(
+                    label,
+                    modifier = Modifier.weight(1f),
+                    fontSize = 8.sp,
+                    color = color,
+                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                    textAlign = when (index) {
+                        0 -> TextAlign.Start
+                        stepLabels.lastIndex -> TextAlign.End
+                        else -> TextAlign.Center
+                    }
+                )
             }
         }
     }

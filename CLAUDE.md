@@ -58,7 +58,7 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 
 ## Current Phase
 
-**Phase 5 — Live Orders + Order History + FCM + Audio Alerts (COMPLETE)**
+**Phase 6 — Dashboards (IN PROGRESS — design improvements pending)**
 
 ## Completed Work
 
@@ -130,7 +130,17 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 - [x] TTS uses Android built-in engine — free, no internet needed
 - [x] `onCleared()` properly shuts down TTS to avoid leaks
 
-### Phase 5
+### Phase 6 — Dashboards (IN PROGRESS)
+- [x] Business app: Dashboard tab (tab 0) — today's revenue, 4 stat cards, active orders preview, best sellers
+- [x] Business app: tabs shifted — Dashboard(0), Orders(1), Menu(2), QR(3)
+- [x] Customer app: `ActiveOrderRepository` — SharedPreferences for in-progress order (kept for safety)
+- [x] Customer app: `CustomerHomeViewModel` — reactive Firestore listener on `users/{uid}/orders` via `listenToUserOrders`; active order appears automatically without needing refresh
+- [x] Customer app: home header changed to "Good morning/afternoon/evening" + name (time-based)
+- [x] Customer app: active order card with status timeline (dots+lines separated from labels row for correct alignment)
+- [x] Customer app: bottom nav (Home | My Orders | Scan) replaces floating FAB
+- [ ] Dashboard design improvements (both apps) — next session
+
+### Phase 5 (remaining)
 - [ ] UPI deep link payment (customer pays after order confirmed)
 - [ ] Firestore security rules (lock down rules from test mode before production)
 
@@ -177,5 +187,5 @@ For full-screen screens without bottom nav, add `statusBarsPadding()` to the top
 
 1. Read this file
 2. Check git log for latest commit
-3. Continue from Phase 5 next steps above
-4. **Pending manual step**: Deploy Cloud Functions (`cd functions && npm install && firebase deploy --only functions`)
+3. Continue from Phase 6 — dashboard design improvements
+4. Cloud Functions already deployed to `countertap-dev` (asia-south1)
