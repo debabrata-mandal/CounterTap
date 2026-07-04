@@ -58,7 +58,7 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 
 ## Current Phase
 
-**Phase 5 — Live Orders + Order History + FCM (COMPLETE)**
+**Phase 5 — Live Orders + Order History + FCM + Audio Alerts (COMPLETE)**
 
 ## Completed Work
 
@@ -121,7 +121,14 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 - [x] Business app saves FCM token to `users/{uid}.fcmToken` on startup (`MainActivity.kt`)
 - [x] `POST_NOTIFICATIONS` permission requested on Android 13+
 - [x] Cloud Function `notifyNewOrder` in `functions/index.js` — triggers on order creation
-- [ ] **Deploy Cloud Functions**: `cd functions && npm install && firebase deploy --only functions`
+- [x] Cloud Function deployed to Firebase (`countertap-dev`, region `asia-south1`)
+- [x] `firebase.json` added at repo root for CLI deployment
+
+### Feature: New Order Audio Alert (business app) ✅
+- [x] Plays notification sound when new order arrives (app in foreground)
+- [x] Text-to-Speech announcement: "New order from {name}. {N} items. Total {amount} rupees."
+- [x] TTS uses Android built-in engine — free, no internet needed
+- [x] `onCleared()` properly shuts down TTS to avoid leaks
 
 ### Phase 5
 - [ ] UPI deep link payment (customer pays after order confirmed)
@@ -137,6 +144,7 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 6. **OrderStatus** as String constants (not enum) for Firestore compatibility
 7. **guava:32.1.2-android** added to customer app — required for CameraX `ListenableFuture` compile access
 8. **ML Kit barcode filter** — use `rawValue != null` not `TYPE_TEXT`; Firestore IDs are classified as TYPE_UNKNOWN
+12. **TTS for new orders** — `TextToSpeech` initialized in `OrdersViewModel`, `ttsReady` flag checked before speaking; `onCleared()` calls `tts.shutdown()`; new orders detected by diffing `knownOrderIds` set; `isFirstLoad` flag skips alert on initial data load
 10. **FCM token storage** — business app saves token to `users/{uid}.fcmToken` using `SetOptions.merge()` so it doesn't overwrite other user fields; `CounterTapMessagingService.onNewToken()` also updates it when the token rotates
 11. **Cloud Function** — `functions/index.js` at repo root; uses Firebase Functions v2 (`onDocumentCreated`); requires Node 20; deploy with `firebase deploy --only functions` from `functions/` dir
 9. **Left accent bar pattern** — use `Row` + `height(IntrinsicSize.Min)` + `Box(Modifier.width(4.dp).fillMaxHeight())` for left border in card items; never use `fillMaxHeight()` inside a wrapping `Box` (gives 0 or unbounded height in lazy lists)
