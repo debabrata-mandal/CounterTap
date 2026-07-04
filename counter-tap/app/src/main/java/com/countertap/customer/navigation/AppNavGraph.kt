@@ -14,6 +14,7 @@ import com.countertap.customer.ui.cart.CartScreen
 import com.countertap.customer.ui.home.CustomerHomeScreen
 import com.countertap.customer.ui.menu.MenuScreen
 import com.countertap.customer.ui.order.OrderTrackingScreen
+import com.countertap.customer.ui.orders.OrderHistoryScreen
 import com.countertap.customer.ui.scanner.ScannerScreen
 import com.countertap.customer.viewmodel.CartViewModel
 
@@ -40,7 +41,19 @@ fun AppNavGraph(startDestination: String) {
                 },
                 onScanNew = {
                     navController.navigate(Routes.SCANNER)
+                },
+                onViewHistory = {
+                    navController.navigate(Routes.ORDER_HISTORY)
                 }
+            )
+        }
+
+        composable(Routes.ORDER_HISTORY) {
+            OrderHistoryScreen(
+                onOpenOrder = { tenantId, orderId ->
+                    navController.navigate(Routes.orderTracking(tenantId, orderId))
+                },
+                onBack = { navController.popBackStack() }
             )
         }
 

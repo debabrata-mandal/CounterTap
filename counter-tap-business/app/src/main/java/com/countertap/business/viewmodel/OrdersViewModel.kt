@@ -78,11 +78,11 @@ class OrdersViewModel @Inject constructor(
         }
     }
 
-    fun updateStatus(orderId: String, newStatus: String) {
+    fun updateStatus(orderId: String, customerId: String, newStatus: String) {
         val tid = tenantId ?: return
         viewModelScope.launch {
             try {
-                orderRepository.updateStatus(tid, orderId, newStatus)
+                orderRepository.updateStatus(tid, orderId, customerId, newStatus)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)
             }
