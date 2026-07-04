@@ -1,97 +1,102 @@
 package com.countertap.business.ui.auth
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.countertap.business.R
+import com.countertap.business.ui.theme.*
 import com.countertap.business.viewmodel.AuthState
 import com.countertap.business.viewmodel.AuthViewModel
 
 @Composable
 fun SignInScreen(
-    onSignedIn: () -> Unit,
+    onSignInSuccess: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val authState by viewModel.authState.collectAsState()
     val context = LocalContext.current
-    val webClientId = context.getString(R.string.default_web_client_id)
 
     LaunchedEffect(authState) {
-        if (authState is AuthState.Success) {
-            onSignedIn()
-        }
+        if (authState is AuthState.Success) onSignInSuccess()
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = "CounterTap",
-            style = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "Business",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.primary
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // App title
+            Text(
+                text = "CounterTap",
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Bold,
+                color = AccentBlue
+            )
+            Text(
+                text = "Business",
+                fontSize = 18.sp,
+                color = TextSecondary
+            )
 
-        Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = "Manage your shop, orders, and menu",
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+            Text(
+                text = "Manage your shop, orders\nand menu from one place.",
+                fontSize = 15.sp,
+                color = TextSecondary,
+                textAlign = TextAlign.Center,
+                lineHeight = 22.sp
+            )
 
-        Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-        when (authState) {
-            is AuthState.Loading -> {
-                CircularProgressIndicator(modifier = Modifier.size(48.dp))
-            }
-            else -> {
-                Button(
-                    onClick = { viewModel.signInWithGoogle(context, webClientId) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Sign in with Google")
-                }
-
-                if (authState is AuthState.Error) {
-                    Spacer(modifier = Modifier.height(16.dp))
+            // Google Sign-In button
+            Button(
+                onClick = { viewModel.signInWithGoogle(context) },
+                enabled = authState !is AuthState.Loading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
+            ) {
+                if (authState is AuthState.Loading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        color = TextPrimary,
+                        strokeWidth = 2.dp
+                    )
+                } else {
                     Text(
-                        text = (authState as AuthState.Error).message,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        textAlign = TextAlign.Center
+                        text = "Sign in with Google",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = TextPrimary
                     )
                 }
+            }
+
+            // Error message
+            if (authState is AuthState.Error) {
+                Text(
+                    text = (authState as AuthState.Error).message,
+                    color = ErrorRed,
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }

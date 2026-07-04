@@ -1,8 +1,11 @@
 package com.countertap.business.ui.home
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -19,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.countertap.business.ui.menu.ProductListScreen
+import com.countertap.business.ui.theme.TextPrimary
 import com.countertap.shared.Product
 
 @Composable
@@ -31,7 +35,7 @@ fun HomeScreen(
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar(modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)) {
                 NavigationBarItem(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
@@ -53,7 +57,7 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Orders — coming in Phase 4")
+                    Text("Orders — coming in Phase 4", color = TextPrimary)
                 }
                 1 -> ProductListScreen(
                     onAddProduct = onAddProduct,

@@ -2,9 +2,12 @@ package com.countertap.business.viewmodel
 
 import android.content.Context
 import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.countertap.business.R
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
@@ -19,40 +22,51 @@ import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 sealed class AuthState {
-    object Idle : AuthState()
+    object Idle    : AuthState()
     object Loading : AuthState()
     data class Success(val user: FirebaseUser) : AuthState()
-    data class Error(val message: String) : AuthState()
+    data class Error(val message: String)      : AuthState()
 }
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val auth: FirebaseAuth
+    private val firebaseAuth: FirebaseAuth,
+    private val credentialManager: CredentialManager
 ) : ViewModel() {
+
+    val currentUser: FirebaseUser? get() = firebaseAuth.currentUser
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
-    val currentUser: FirebaseUser? get() = auth.currentUser
-
-    fun signInWithGoogle(context: Context, webClientId: String) {
+    fun signInWithGoogle(activityContext: Context) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
             try {
-                val credentialManager = CredentialManager.create(context)
                 val googleIdOption = GetGoogleIdOption.Builder()
                     .setFilterByAuthorizedAccounts(false)
-                    .setServerClientId(webClientId)
+                    .setServerClientId(activityContext.getString(R.string.default_web_client_id))
                     .build()
+
                 val request = GetCredentialRequest.Builder()
                     .addCredentialOption(googleIdOption)
                     .build()
-                val result = credentialManager.getCredential(context, request)
-                val googleCredential = GoogleIdTokenCredential.createFrom(result.credential.data)
-                val firebaseCredential = GoogleAuthProvider.getCredential(googleCredential.idToken, null)
-                val authResult = auth.signInWithCredential(firebaseCredential).await()
-                val user = authResult.user ?: throw Exception("Sign-in succeeded but user is null")
-                _authState.value = AuthState.Success(user)
+
+                val result = credentialManager.getCredential(activityContext, request)
+                val credential = result.credential
+
+                if (credential is CustomCredential &&
+                    credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                ) {
+                    val googleCred = GoogleIdTokenCredential.createFrom(credential.data)
+                    val authCred  = GoogleAuthProvider.getCredential(googleCred.idToken, null)
+                    val authResult = firebaseAuth.signInWithCredential(authCred).await()
+                    _authState.value = AuthState.Success(authResult.user!!)
+                } else {
+                    _authState.value = AuthState.Error("Unexpected credential type")
+                }
+            } catch (e: GetCredentialException) {
+                _authState.value = AuthState.Error(e.message ?: "Sign-in cancelled")
             } catch (e: Exception) {
                 _authState.value = AuthState.Error(e.message ?: "Sign-in failed")
             }
@@ -60,7 +74,7 @@ class AuthViewModel @Inject constructor(
     }
 
     fun signOut() {
-        auth.signOut()
+        firebaseAuth.signOut()
         _authState.value = AuthState.Idle
     }
 }

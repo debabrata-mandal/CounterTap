@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Storefront icon (Material Icons) — business app -->
+    <path
+        android:fillColor="#FF2196F3"
+        android:pathData="M22,54 L22,38 L54,26 L86,38 L86,54 Z" />
+    <path
+        android:fillColor="#FF2196F3"
+        android:pathData="M30,54 L30,82 L48,82 L48,66 L60,66 L60,82 L78,82 L78,54 Z" />
+    <path
+        android:fillColor="#FF64B5F6"
+        android:pathData="M54,26 L86,38 L86,54 L54,54 Z" />
+    <path
+        android:fillColor="#FF1976D2"
+        android:pathData="M22,54 L54,54 L54,26 Z" />
+</vector>

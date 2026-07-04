@@ -1,5 +1,6 @@
 package com.countertap.business.ui.menu
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,38 +10,46 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.countertap.business.ui.theme.AccentBlue
+import com.countertap.business.ui.theme.BackgroundDark
+import com.countertap.business.ui.theme.CardBackground
+import com.countertap.business.ui.theme.CardElevated
+import com.countertap.business.ui.theme.ErrorRed
+import com.countertap.business.ui.theme.SuccessGreen
+import com.countertap.business.ui.theme.TextHint
+import com.countertap.business.ui.theme.TextPrimary
+import com.countertap.business.ui.theme.TextSecondary
 import com.countertap.business.viewmodel.MenuViewModel
-import com.countertap.shared.Category
 import com.countertap.shared.Product
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductListScreen(
     onAddProduct: () -> Unit,
@@ -51,52 +60,71 @@ fun ProductListScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
+        containerColor = BackgroundDark,
         topBar = {
-            TopAppBar(
-                title = { Text("Menu") },
-                actions = {
-                    IconButton(onClick = onManageCategories) {
-                        Icon(Icons.Default.Edit, contentDescription = "Manage categories")
-                    }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Menu", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                IconButton(onClick = onManageCategories) {
+                    Icon(Icons.Default.Edit, contentDescription = "Categories", tint = AccentBlue)
                 }
-            )
+            }
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddProduct) {
+            FloatingActionButton(
+                onClick = onAddProduct,
+                containerColor = AccentBlue,
+                contentColor = TextPrimary
+            ) {
                 Icon(Icons.Default.Add, contentDescription = "Add product")
             }
         }
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(BackgroundDark)
+        ) {
             when {
-                uiState.isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                uiState.isLoading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center),
+                        color = AccentBlue
+                    )
+                }
                 uiState.products.isEmpty() -> {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("No products yet", style = MaterialTheme.typography.titleMedium)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "Tap + to add your first product",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Text("No products yet", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text("Tap + to add your first item", fontSize = 14.sp, color = TextSecondary)
                     }
                 }
                 else -> {
                     val grouped = uiState.products.groupBy { it.categoryId }
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(0.dp)
+                    ) {
                         uiState.categories.forEach { category ->
                             val products = grouped[category.id] ?: emptyList()
                             if (products.isNotEmpty()) {
                                 item {
                                     Text(
-                                        text = category.name,
-                                        style = MaterialTheme.typography.titleSmall,
+                                        text = category.name.uppercase(),
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                        color = AccentBlue,
+                                        letterSpacing = 1.2.sp,
+                                        modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 8.dp)
                                     )
                                 }
                                 items(products) { product ->
@@ -104,22 +132,21 @@ fun ProductListScreen(
                                         product = product,
                                         onEdit = { onEditProduct(product) },
                                         onDelete = { viewModel.deleteProduct(product.id) },
-                                        onToggleAvailability = { viewModel.toggleAvailability(product) }
+                                        onToggle = { viewModel.toggleAvailability(product) }
                                     )
                                 }
-                                item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
                             }
                         }
-                        // Products with no category
                         val uncategorized = grouped[""] ?: emptyList()
                         if (uncategorized.isNotEmpty()) {
                             item {
                                 Text(
-                                    text = "Uncategorized",
-                                    style = MaterialTheme.typography.titleSmall,
+                                    text = "UNCATEGORIZED",
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                    color = TextHint,
+                                    letterSpacing = 1.2.sp,
+                                    modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 8.dp)
                                 )
                             }
                             items(uncategorized) { product ->
@@ -127,10 +154,11 @@ fun ProductListScreen(
                                     product = product,
                                     onEdit = { onEditProduct(product) },
                                     onDelete = { viewModel.deleteProduct(product.id) },
-                                    onToggleAvailability = { viewModel.toggleAvailability(product) }
+                                    onToggle = { viewModel.toggleAvailability(product) }
                                 )
                             }
                         }
+                        item { Spacer(modifier = Modifier.height(80.dp)) }
                     }
                 }
             }
@@ -143,52 +171,64 @@ private fun ProductItem(
     product: Product,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onToggleAvailability: () -> Unit
+    onToggle: () -> Unit
 ) {
-    Card(
+    val unavailableAlpha = if (product.available) 1f else 0.5f
+
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(CardBackground)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = product.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    textDecoration = if (!product.available) TextDecoration.LineThrough else null,
-                    color = if (!product.available) MaterialTheme.colorScheme.onSurfaceVariant
-                            else MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "₹${product.price}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                if (product.description.isNotBlank()) {
-                    Text(
-                        text = product.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
-                    )
-                }
-            }
-            Switch(
-                checked = product.available,
-                onCheckedChange = { onToggleAvailability() }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = product.name,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary.copy(alpha = unavailableAlpha),
+                textDecoration = if (!product.available) TextDecoration.LineThrough else null
             )
-            IconButton(onClick = onEdit) {
-                Icon(Icons.Default.Edit, contentDescription = "Edit")
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "₹${product.price.toInt()}",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = AccentBlue.copy(alpha = unavailableAlpha)
+            )
+            if (product.description.isNotBlank()) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = product.description,
+                    fontSize = 12.sp,
+                    color = TextSecondary.copy(alpha = unavailableAlpha),
+                    maxLines = 1
+                )
             }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.error)
-            }
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Switch(
+            checked = product.available,
+            onCheckedChange = { onToggle() },
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = TextPrimary,
+                checkedTrackColor = SuccessGreen,
+                uncheckedThumbColor = TextSecondary,
+                uncheckedTrackColor = CardElevated
+            )
+        )
+
+        IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = AccentBlue, modifier = Modifier.size(18.dp))
+        }
+
+        IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = ErrorRed, modifier = Modifier.size(18.dp))
         }
     }
 }

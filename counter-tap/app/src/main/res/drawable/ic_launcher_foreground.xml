@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Menu / order list icon — customer app -->
+    <!-- Document outline -->
+    <path
+        android:fillColor="#FF2196F3"
+        android:pathData="M36,28 L36,80 L72,80 L72,44 L56,28 Z" />
+    <!-- Folded corner -->
+    <path
+        android:fillColor="#FF1976D2"
+        android:pathData="M56,28 L56,44 L72,44 Z" />
+    <!-- Menu lines -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M43,52 L65,52 L65,55 L43,55 Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M43,59 L65,59 L65,62 L43,62 Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M43,66 L58,66 L58,69 L43,69 Z" />
+</vector>
