@@ -3,7 +3,6 @@ package com.countertap.customer.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -44,6 +43,9 @@ fun AppNavGraph(startDestination: String) {
                 },
                 onViewHistory = {
                     navController.navigate(Routes.ORDER_HISTORY)
+                },
+                onTrackOrder = { tenantId, orderId ->
+                    navController.navigate(Routes.orderTracking(tenantId, orderId))
                 }
             )
         }

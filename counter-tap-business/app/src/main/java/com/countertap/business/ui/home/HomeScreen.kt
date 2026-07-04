@@ -7,19 +7,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -31,25 +28,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.countertap.business.ui.dashboard.DashboardScreen
 import com.countertap.business.ui.menu.ProductListScreen
 import com.countertap.business.ui.orders.OrdersScreen
 import com.countertap.business.ui.qr.QrCodeScreen
 import com.countertap.business.ui.theme.AccentBlue
 import com.countertap.business.ui.theme.BackgroundDark
 import com.countertap.business.ui.theme.CardBackground
-import com.countertap.business.ui.theme.CardElevated
-import com.countertap.business.ui.theme.TextPrimary
 import com.countertap.business.ui.theme.TextSecondary
 import com.countertap.shared.Product
 
 private data class TabItem(val label: String, val icon: ImageVector)
 
 private val TABS = listOf(
+    TabItem("Home", Icons.Default.Dashboard),
     TabItem("Orders", Icons.AutoMirrored.Filled.ReceiptLong),
     TabItem("Menu", Icons.AutoMirrored.Filled.List),
     TabItem("QR Code", Icons.Default.QrCode)
@@ -66,13 +62,14 @@ fun HomeScreen(
     Column(modifier = Modifier.fillMaxSize().background(BackgroundDark)) {
         Box(modifier = Modifier.weight(1f)) {
             when (selectedTab) {
-                0 -> OrdersScreen()
-                1 -> ProductListScreen(
+                0 -> DashboardScreen()
+                1 -> OrdersScreen()
+                2 -> ProductListScreen(
                     onAddProduct = onAddProduct,
                     onEditProduct = onEditProduct,
                     onManageCategories = onManageCategories
                 )
-                2 -> QrCodeScreen()
+                3 -> QrCodeScreen()
             }
         }
 
