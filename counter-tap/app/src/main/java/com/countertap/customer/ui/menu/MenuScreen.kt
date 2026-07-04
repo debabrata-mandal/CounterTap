@@ -59,7 +59,8 @@ fun MenuScreen(
     cartViewModel: CartViewModel = hiltViewModel()
 ) {
     val uiState by menuViewModel.uiState.collectAsState()
-    val cartCount = cartViewModel.totalCount
+    val cartItems by cartViewModel.items.collectAsState()
+    val cartCount = cartItems.sumOf { it.quantity }
 
     LaunchedEffect(tenantId) { menuViewModel.loadShop(tenantId) }
 
@@ -128,7 +129,7 @@ fun MenuScreen(
                                     items(products) { product ->
                                         ProductCard(
                                             product = product,
-                                            quantity = cartViewModel.quantityOf(product.id),
+                                            quantity = cartItems.find { it.product.id == product.id }?.quantity ?: 0,
                                             onAdd = { cartViewModel.add(product) },
                                             onRemove = { cartViewModel.remove(product) }
                                         )
@@ -170,7 +171,7 @@ fun MenuScreen(
                 Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = TextPrimary)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "View Cart  •  $cartCount item${if (cartCount > 1) "s" else ""}  •  ₹${cartViewModel.totalAmount.toInt()}",
+                    text = "View Cart  •  $cartCount item${if (cartCount > 1) "s" else ""}  •  ₹${cartItems.sumOf { it.product.price * it.quantity }.toInt()}",
                     color = TextPrimary,
                     fontWeight = FontWeight.SemiBold
                 )

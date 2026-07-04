@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.countertap.business.ui.menu.ProductListScreen
+import com.countertap.business.ui.orders.OrdersScreen
 import com.countertap.business.ui.qr.QrCodeScreen
 import com.countertap.business.ui.theme.AccentBlue
 import com.countertap.business.ui.theme.BackgroundDark
@@ -65,7 +66,7 @@ fun HomeScreen(
     Column(modifier = Modifier.fillMaxSize().background(BackgroundDark)) {
         Box(modifier = Modifier.weight(1f)) {
             when (selectedTab) {
-                0 -> OrdersPlaceholder()
+                0 -> OrdersScreen()
                 1 -> ProductListScreen(
                     onAddProduct = onAddProduct,
                     onEditProduct = onEditProduct,
@@ -83,19 +84,6 @@ fun HomeScreen(
     }
 }
 
-@Composable
-private fun OrdersPlaceholder() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .padding(20.dp)
-    ) {
-        Text("Orders", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text("Live orders coming soon.", fontSize = 14.sp, color = TextSecondary)
-    }
-}
 
 @Composable
 private fun PremiumNavBar(
