@@ -107,7 +107,8 @@ fun OrdersScreen(viewModel: OrdersViewModel = hiltViewModel()) {
                             onAccept = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.CONFIRMED) },
                             onReject = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.CANCELLED) },
                             onReady = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.READY) },
-                            onComplete = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.COMPLETED) }
+                            onComplete = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.COMPLETED) },
+                            onMarkPaid = { viewModel.markAsPaid(order.id) }
                         )
                     }
                 }
@@ -122,7 +123,8 @@ fun OrdersScreen(viewModel: OrdersViewModel = hiltViewModel()) {
                             onAccept = {},
                             onReject = {},
                             onReady = {},
-                            onComplete = {}
+                            onComplete = {},
+                            onMarkPaid = {}
                         )
                     }
                 }
@@ -163,7 +165,8 @@ private fun OrderCard(
     onAccept: () -> Unit,
     onReject: () -> Unit,
     onReady: () -> Unit,
-    onComplete: () -> Unit
+    onComplete: () -> Unit,
+    onMarkPaid: () -> Unit
 ) {
     val accentColor = statusColor(order.status)
     val timeStr = order.createdAt?.let {
@@ -261,15 +264,44 @@ private fun OrderCard(
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Total", fontSize = 14.sp, color = TextSecondary)
-                Text(
-                    "₹${order.totalAmount.toInt()}",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AccentBlue
-                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "₹${order.totalAmount.toInt()}",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AccentBlue
+                    )
+                    val isPaid = order.paymentStatus == "paid"
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background((if (isPaid) SuccessGreen else WarningOrange).copy(alpha = 0.15f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            if (isPaid) "Paid" else "Unpaid",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isPaid) SuccessGreen else WarningOrange
+                        )
+                    }
+                }
+            }
+
+            if (order.paymentStatus != "paid" && order.status !in setOf(OrderStatus.COMPLETED, OrderStatus.CANCELLED)) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = onMarkPaid,
+                    modifier = Modifier.fillMaxWidth().height(36.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Mark as Paid", fontSize = 13.sp, color = TextPrimary, fontWeight = FontWeight.Bold)
+                }
             }
 
             // Actions
@@ -307,8 +339,16 @@ private fun OrderCard(
                                 onClick = onComplete,
                                 modifier = Modifier.fillMaxWidth().height(36.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
-                                shape = RoundedCornerShape(8.dp)
-                            ) { Text("Complete", fontSize = 13.sp, color = TextPrimary, fontWeight = FontWeight.Bold) }
+                                shape = RoundedCornerShape(8.dp),
+                                enabled = order.paymentStatus == "paid"
+                            ) {
+                                Text(
+                                    if (order.paymentStatus == "paid") "Complete" else "Complete (collect payment first)",
+                                    fontSize = 13.sp,
+                                    color = TextPrimary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }

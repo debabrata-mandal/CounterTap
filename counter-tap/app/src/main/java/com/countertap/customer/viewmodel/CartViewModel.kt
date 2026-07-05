@@ -8,7 +8,9 @@ import com.countertap.customer.repository.ShopHistoryRepository
 import com.countertap.shared.Order
 import com.countertap.shared.OrderItem
 import com.countertap.shared.OrderStatus
+import com.countertap.shared.PaymentMethod
 import com.countertap.shared.Product
+
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -86,6 +88,7 @@ class CartViewModel @Inject constructor(
                     },
                     totalAmount = totalAmount,
                     status = OrderStatus.PENDING,
+                    paymentMethod = PaymentMethod.CASH,
                     note = note
                 )
                 val orderId = orderRepository.placeOrder(tenantId, order)

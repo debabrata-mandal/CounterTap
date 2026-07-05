@@ -21,6 +21,11 @@ class OrderRepository @Inject constructor(
         return doc.id
     }
 
+    suspend fun getOrder(tenantId: String, orderId: String): com.countertap.shared.Order? =
+        firestore.collection("tenants").document(tenantId)
+            .collection("orders").document(orderId).get().await()
+            .toObject(com.countertap.shared.Order::class.java)
+
     fun listenToOrder(tenantId: String, orderId: String): Flow<Order?> = callbackFlow {
         val ref = firestore
             .collection("tenants").document(tenantId)
@@ -51,6 +56,24 @@ class OrderRepository @Inject constructor(
         firestore.collection("users").document(userId)
             .collection("orders").document(orderId)
             .set(summary)
+            .await()
+    }
+
+    suspend fun markPaymentPaid(tenantId: String, orderId: String, txId: String) {
+        val ref = firestore.collection("tenants").document(tenantId)
+            .collection("orders").document(orderId)
+        ref.update(
+            mapOf(
+                "paymentStatus" to "paid",
+                "upiTransactionId" to txId
+            )
+        ).await()
+        // also update user order summary
+        val snapshot = ref.get().await()
+        val order = snapshot.toObject(com.countertap.shared.Order::class.java) ?: return
+        firestore.collection("users").document(order.customerId)
+            .collection("orders").document(orderId)
+            .update(mapOf("paymentStatus" to "paid"))
             .await()
     }
 

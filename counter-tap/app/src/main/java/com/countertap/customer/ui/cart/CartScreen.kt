@@ -61,7 +61,7 @@ import com.countertap.customer.viewmodel.OrderState
 fun CartScreen(
     tenantId: String,
     onBack: () -> Unit,
-    onOrderPlaced: (String) -> Unit,
+    onOrderPlaced: (orderId: String) -> Unit,
     viewModel: CartViewModel = hiltViewModel()
 ) {
     val items by viewModel.items.collectAsState()
@@ -262,3 +262,4 @@ fun CartScreen(
         }
     }
 }
+

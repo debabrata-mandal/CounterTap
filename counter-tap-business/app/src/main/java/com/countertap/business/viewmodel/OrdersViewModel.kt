@@ -126,6 +126,17 @@ class OrdersViewModel @Inject constructor(
         super.onCleared()
     }
 
+    fun markAsPaid(orderId: String) {
+        val tid = tenantId ?: return
+        viewModelScope.launch {
+            try {
+                orderRepository.markAsPaid(tid, orderId)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message)
+            }
+        }
+    }
+
     fun updateStatus(orderId: String, customerId: String, newStatus: String) {
         val tid = tenantId ?: return
         viewModelScope.launch {

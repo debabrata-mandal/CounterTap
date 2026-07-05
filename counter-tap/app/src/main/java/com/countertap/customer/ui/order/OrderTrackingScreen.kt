@@ -21,8 +21,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -78,7 +76,6 @@ private val STATUS_INDEX = mapOf(
 fun OrderTrackingScreen(
     tenantId: String,
     orderId: String,
-    onScanAnother: () -> Unit,
     viewModel: OrderTrackingViewModel = hiltViewModel()
 ) {
     LaunchedEffect(tenantId, orderId) {
@@ -148,6 +145,12 @@ fun OrderTrackingScreen(
                         CancelledCard()
                     } else {
                         StatusTimeline(currentStatus = order.status)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        if (order.paymentStatus == "paid") {
+                            PaymentConfirmedBanner()
+                        } else {
+                            CashPaymentReminder(amount = order.totalAmount.toInt())
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
@@ -155,25 +158,6 @@ fun OrderTrackingScreen(
                     Spacer(modifier = Modifier.height(24.dp))
                 }
 
-                // Bottom action — only shown when done
-                if (isCancelled || order.status == OrderStatus.COMPLETED) {
-                    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-                        Button(
-                            onClick = onScanAnother,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text(
-                                "Change Restaurant",
-                                color = TextPrimary,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 15.sp,
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            )
-                        }
-                    }
-                }
             }
         }
     }
@@ -263,6 +247,62 @@ private fun StatusTimeline(currentStatus: String) {
                     Spacer(modifier = Modifier.height(if (index < STEPS.lastIndex) 20.dp else 0.dp))
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun PaymentConfirmedBanner() {
+    Row(
+        modifier = androidx.compose.ui.Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(SuccessGreen.copy(alpha = 0.1f))
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("✅", fontSize = 20.sp)
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                "Payment confirmed",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = SuccessGreen
+            )
+            Text(
+                "The shop has received your payment",
+                fontSize = 12.sp,
+                color = TextSecondary
+            )
+        }
+    }
+}
+
+@Composable
+private fun CashPaymentReminder(amount: Int) {
+    Row(
+        modifier = androidx.compose.ui.Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(WarningOrange.copy(alpha = 0.1f))
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("💵", fontSize = 20.sp)
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                "Pay ₹$amount cash at the counter",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = WarningOrange
+            )
+            Text(
+                "Please keep exact change ready",
+                fontSize = 12.sp,
+                color = TextSecondary
+            )
         }
     }
 }

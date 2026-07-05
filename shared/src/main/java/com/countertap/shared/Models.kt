@@ -28,11 +28,22 @@ data class Order(
     val items: List<OrderItem> = emptyList(),
     val totalAmount: Double = 0.0,
     val status: String = OrderStatus.PENDING,
-    val paymentStatus: String = "unpaid",
+    val paymentStatus: String = PaymentStatus.UNPAID,
+    val paymentMethod: String = PaymentMethod.CASH,
     val upiTransactionId: String = "",
     val note: String = "",
     @ServerTimestamp val createdAt: Date? = null
 )
+
+object PaymentStatus {
+    const val UNPAID = "unpaid"
+    const val PAID = "paid"
+}
+
+object PaymentMethod {
+    const val UPI = "upi"
+    const val CASH = "cash"
+}
 
 data class OrderItem(
     val productId: String = "",

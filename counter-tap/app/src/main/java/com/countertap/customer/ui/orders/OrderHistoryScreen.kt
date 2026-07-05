@@ -14,16 +14,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -38,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.countertap.customer.model.UserOrderSummary
+import com.countertap.customer.ui.home.CustomerBottomNav
 import com.countertap.customer.ui.theme.AccentBlue
 import com.countertap.customer.ui.theme.BackgroundDark
 import com.countertap.customer.ui.theme.CardBackground
@@ -55,7 +53,8 @@ import java.util.Locale
 @Composable
 fun OrderHistoryScreen(
     onOpenOrder: (tenantId: String, orderId: String) -> Unit,
-    onBack: () -> Unit,
+    onHome: () -> Unit,
+    onScan: () -> Unit,
     viewModel: OrderHistoryViewModel = hiltViewModel()
 ) {
     val orders by viewModel.orders.collectAsState()
@@ -65,30 +64,20 @@ fun OrderHistoryScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundDark)
-            .statusBarsPadding()
     ) {
         // Header
-        Row(
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .weight(1f)
+                .statusBarsPadding()
         ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = TextPrimary
-                )
-            }
-            Text(
-                "My Orders",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary,
-                modifier = Modifier.padding(start = 4.dp)
-            )
-        }
+        Text(
+            "My Orders",
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
+        )
 
         when {
             isLoading -> Box(
@@ -135,6 +124,14 @@ fun OrderHistoryScreen(
                 item { Spacer(modifier = Modifier.height(24.dp)) }
             }
         }
+        } // end weight(1f) Column
+
+        CustomerBottomNav(
+            selectedIndex = 1,
+            onHome = onHome,
+            onOrders = {},
+            onScan = onScan
+        )
     }
 }
 

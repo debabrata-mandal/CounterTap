@@ -25,7 +25,7 @@ Local: C:\Github\default\CounterTap
 - **Navigation**: Compose Navigation
 - **Backend**: Firebase (Firestore, Auth, Storage, FCM)
 - **Auth**: Google Sign-In via Firebase Auth + Credential Manager
-- **Payments**: UPI deep link (free, opens GPay/PhonePe)
+- **Payments**: Cash-only (v1); Razorpay UPI-only planned for v2
 - **QR generate**: ZXing (business app)
 - **QR scan**: ML Kit + CameraX (customer app)
 - **Image loading**: Coil
@@ -58,7 +58,7 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 
 ## Current Phase
 
-**Phase 6 — Dashboards (IN PROGRESS — design improvements pending)**
+**Phase 6 — Dashboards + Payments (IN PROGRESS — design improvements pending)**
 
 ## Completed Work
 
@@ -134,20 +134,40 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 - [x] Business app: Dashboard tab (tab 0) — today's revenue, 4 stat cards, active orders preview, best sellers
 - [x] Business app: tabs shifted — Dashboard(0), Orders(1), Menu(2), QR(3)
 - [x] Customer app: `ActiveOrderRepository` — SharedPreferences for in-progress order (kept for safety)
-- [x] Customer app: `CustomerHomeViewModel` — reactive Firestore listener on `users/{uid}/orders` via `listenToUserOrders`; active order appears automatically without needing refresh
+- [x] Customer app: `CustomerHomeViewModel` — reactive Firestore listener on `users/{uid}/orders` via `listenToUserOrders`; all active orders shown (not just most recent)
 - [x] Customer app: home header changed to "Good morning/afternoon/evening" + name (time-based)
-- [x] Customer app: active order card with status timeline (dots+lines separated from labels row for correct alignment)
-- [x] Customer app: bottom nav (Home | My Orders | Scan) replaces floating FAB
-- [ ] Dashboard design improvements (both apps) — next session
+- [x] Customer app: active order cards with status timeline — all active orders shown, each tappable
+- [x] Customer app: bottom nav (Home | My Orders | Scan) — persistent on both Home and My Orders screens
+- [x] Business app: dashboard active order cards tappable — navigates to Orders tab
+- [ ] Dashboard design improvements (both apps) — deferred
 
-### Phase 5 (remaining)
-- [ ] UPI deep link payment (customer pays after order confirmed)
-- [ ] Firestore security rules (lock down rules from test mode before production)
+### Phase 5 — Payments ✅ (v1 Cash-only)
+- [x] **Cash-only payment** — UPI deep link abandoned (GPay blocks amount pre-fill from unregistered apps)
+- [x] `PaymentMethod` + `PaymentStatus` constants added to shared `Models.kt`
+- [x] `Order` model has `paymentMethod` (default "cash") and `paymentStatus` (default "unpaid") fields
+- [x] Business app: **"Mark as Paid"** button on active order cards — updates both tenant and user order docs atomically
+- [x] Business app: Unpaid/Paid badge on every order card
+- [x] Business app: Complete button disabled until order is marked paid
+- [x] Customer app: Order Tracking shows **"Pay ₹X cash at counter"** (orange) when unpaid
+- [x] Customer app: Order Tracking switches to **"✅ Payment confirmed"** (green) in real time when owner marks paid
+- [x] `OrderRepository.markPaymentPaid` (customer) + `OrderRepository.markAsPaid` (business) — both update tenant + user docs via batch write
+- [ ] Razorpay UPI-only — planned for v2 (0% fee for UPI, automatic confirmation)
+
+### Bug fixes (2026-07-05)
+- [x] Stale active orders with blank tenantId/orderId filtered out in CustomerHomeViewModel
+- [x] "Change Restaurant" button removed from Order Tracking (customer uses bottom nav instead)
+- [x] My Orders screen: bottom nav visible, no back button needed
+- [x] `CustomerBottomNav` extracted to shared `ui/home/CustomerBottomNav.kt`
+
+### Remaining
+- [ ] Firestore security rules (lock down from test mode before production)
+- [ ] Dashboard design improvements (both apps)
+- [ ] App icons, splash screen, Play Store prep
 
 ## Key Decisions Made
 
 1. **Google Sign-In via Firebase Auth** (not direct Google) — needed for Firestore security rules (request.auth.uid)
-2. **UPI deep link** for payments in v1 (free, 0% fees) — Razorpay in v2 for auto-confirmation
+2. **Cash-only payments v1** — UPI deep link attempted but GPay blocks `upi://pay` intents with pre-filled amount from unregistered apps; Razorpay UPI-only (0% fee) planned for v2
 3. **Single Firebase project** (countertap-dev) for dev — add countertap-prod at launch
 4. **Monorepo** — both apps + shared module in one repo
 5. **KAPT** for Hilt (can migrate to KSP later)
@@ -187,5 +207,5 @@ For full-screen screens without bottom nav, add `statusBarsPadding()` to the top
 
 1. Read this file
 2. Check git log for latest commit
-3. Continue from Phase 6 — dashboard design improvements
+3. Continue from **Remaining** section above — Firestore security rules is highest priority before real users
 4. Cloud Functions already deployed to `countertap-dev` (asia-south1)

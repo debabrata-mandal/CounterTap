@@ -1,6 +1,7 @@
 package com.countertap.business.ui.dashboard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,7 +50,10 @@ import com.countertap.shared.Order
 import com.countertap.shared.OrderStatus
 
 @Composable
-fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
+fun DashboardScreen(
+    onNavigateToOrders: () -> Unit = {},
+    viewModel: DashboardViewModel = hiltViewModel()
+) {
     val state by viewModel.state.collectAsState()
 
     Box(
@@ -216,7 +220,7 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
 
                         state.activeOrders.forEach { order ->
                             item(key = order.id) {
-                                MiniOrderCard(order = order)
+                                MiniOrderCard(order = order, onClick = onNavigateToOrders)
                             }
                         }
                     }
@@ -322,7 +326,7 @@ private fun StatCard(label: String, value: String, valueColor: Color) {
 }
 
 @Composable
-private fun MiniOrderCard(order: Order) {
+private fun MiniOrderCard(order: Order, onClick: () -> Unit = {}) {
     val accentColor = dashboardStatusColor(order.status)
     val itemsSummary = order.items.joinToString(", ") { "${it.quantity}× ${it.productName}" }
 
@@ -333,6 +337,7 @@ private fun MiniOrderCard(order: Order) {
             .height(IntrinsicSize.Min)
             .clip(RoundedCornerShape(12.dp))
             .background(CardBackground)
+            .clickable(onClick = onClick)
     ) {
         Box(
             modifier = Modifier

@@ -24,7 +24,7 @@ data class ActiveOrderInfo(
 data class CustomerHomeState(
     val recentShops: List<ShopRecord> = emptyList(),
     val userName: String = "",
-    val activeOrder: ActiveOrderInfo? = null
+    val activeOrders: List<ActiveOrderInfo> = emptyList()
 )
 
 @HiltViewModel
@@ -43,11 +43,15 @@ class CustomerHomeViewModel @Inject constructor(
         if (uid != null) viewModelScope.launch {
             try {
                 orderRepository.listenToUserOrders(uid).collect { orders ->
-                    val active = orders
-                        .filter { it.status != OrderStatus.COMPLETED && it.status != OrderStatus.CANCELLED }
-                        .maxByOrNull { it.createdAt?.time ?: 0L }
-                    _state.value = _state.value.copy(
-                        activeOrder = active?.let {
+                    val activeOrders = orders
+                        .filter {
+                            it.status != OrderStatus.COMPLETED &&
+                            it.status != OrderStatus.CANCELLED &&
+                            it.tenantId.isNotBlank() &&
+                            it.id.isNotBlank()
+                        }
+                        .sortedByDescending { it.createdAt?.time ?: 0L }
+                        .map {
                             ActiveOrderInfo(
                                 tenantId = it.tenantId,
                                 orderId = it.id,
@@ -55,7 +59,7 @@ class CustomerHomeViewModel @Inject constructor(
                                 status = it.status
                             )
                         }
-                    )
+                    _state.value = _state.value.copy(activeOrders = activeOrders)
                 }
             } catch (_: Exception) {}
         }

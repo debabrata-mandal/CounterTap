@@ -29,6 +29,22 @@ class OrderRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
+    suspend fun markAsPaid(tenantId: String, orderId: String) {
+        val orderRef = firestore.collection("tenants").document(tenantId)
+            .collection("orders").document(orderId)
+        val order = orderRef.get().await().toObject(Order::class.java)
+        val batch = firestore.batch()
+        batch.update(orderRef, "paymentStatus", "paid")
+        if (order?.customerId?.isNotBlank() == true) {
+            batch.update(
+                firestore.collection("users").document(order.customerId)
+                    .collection("orders").document(orderId),
+                "paymentStatus", "paid"
+            )
+        }
+        batch.commit().await()
+    }
+
     suspend fun updateStatus(tenantId: String, orderId: String, customerId: String, newStatus: String) {
         val batch = firestore.batch()
         batch.update(

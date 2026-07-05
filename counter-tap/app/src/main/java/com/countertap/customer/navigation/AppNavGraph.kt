@@ -55,7 +55,14 @@ fun AppNavGraph(startDestination: String) {
                 onOpenOrder = { tenantId, orderId ->
                     navController.navigate(Routes.orderTracking(tenantId, orderId))
                 },
-                onBack = { navController.popBackStack() }
+                onHome = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = false }
+                    }
+                },
+                onScan = {
+                    navController.navigate(Routes.SCANNER)
+                }
             )
         }
 
@@ -120,12 +127,7 @@ fun AppNavGraph(startDestination: String) {
             val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
             OrderTrackingScreen(
                 tenantId = tenantId,
-                orderId = orderId,
-                onScanAnother = {
-                    navController.navigate(Routes.HOME) {
-                        popUpTo(Routes.HOME) { inclusive = true }
-                    }
-                }
+                orderId = orderId
             )
         }
     }
