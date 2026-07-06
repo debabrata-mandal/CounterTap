@@ -4,17 +4,35 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Storefront icon (Material Icons) — business app -->
+
+    <!-- Roof triangle -->
     <path
         android:fillColor="#FF2196F3"
-        android:pathData="M22,54 L22,38 L54,26 L86,38 L86,54 Z" />
-    <path
-        android:fillColor="#FF2196F3"
-        android:pathData="M30,54 L30,82 L48,82 L48,66 L60,66 L60,82 L78,82 L78,54 Z" />
+        android:pathData="M18,52 L54,24 L90,52 Z"/>
+
+    <!-- Building body -->
     <path
         android:fillColor="#FF64B5F6"
-        android:pathData="M54,26 L86,38 L86,54 L54,54 Z" />
+        android:pathData="M26,52 L26,84 L82,84 L82,52 Z"/>
+
+    <!-- Accent strip under roof -->
+    <path
+        android:fillColor="#FF1565C0"
+        android:pathData="M26,52 L82,52 L82,57 L26,57 Z"/>
+
+    <!-- Left window -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M32,60 L44,60 L44,72 L32,72 Z"/>
+
+    <!-- Right window -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M64,60 L76,60 L76,72 L64,72 Z"/>
+
+    <!-- Door (arched top) -->
     <path
         android:fillColor="#FF1976D2"
-        android:pathData="M22,54 L54,54 L54,26 Z" />
+        android:pathData="M46,84 L46,71 Q54,63 62,71 L62,84 Z"/>
+
 </vector>

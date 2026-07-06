@@ -90,6 +90,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.playservices)
 
     implementation(libs.coil.compose)
+    implementation(libs.androidx.splashscreen)
 
     // QR code generation (business app only)
     implementation(libs.zxing.core)

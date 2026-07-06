@@ -1,0 +1,87 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Returns true if the caller owns the tenant document at tenants/{tenantId}
+    function isOwner(tenantId) {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/tenants/$(tenantId)).data.ownerId
+          == request.auth.uid;
+    }
+
+    // ── Tenant (shop) ──────────────────────────────────────────────────────
+    match /tenants/{tenantId} {
+      // Any signed-in user can read shop info (needed to browse menu)
+      allow read:  if request.auth != null;
+      // Only the owner can write the shop root doc
+      allow write: if request.auth != null &&
+        (
+          // Creating: ownerId in the new doc must match caller
+          (resource == null && request.resource.data.ownerId == request.auth.uid) ||
+          // Updating: caller must already be the owner
+          (resource != null && resource.data.ownerId == request.auth.uid)
+        );
+
+      // Menu: products
+      match /products/{productId} {
+        allow read:  if request.auth != null;
+        allow write: if isOwner(tenantId);
+      }
+
+      // Menu: categories
+      match /categories/{categoryId} {
+        allow read:  if request.auth != null;
+        allow write: if isOwner(tenantId);
+      }
+
+      // Orders
+      match /orders/{orderId} {
+        // list (collection query) — only the owner; resource.data unavailable here
+        allow list:   if isOwner(tenantId);
+        // get (single doc) — owner OR the customer who placed it
+        allow get:    if isOwner(tenantId) ||
+          (request.auth != null && request.auth.uid == resource.data.customerId);
+
+        // Customer places an order:
+        //   - customerId must equal their own UID
+        //   - must start as PENDING and unpaid
+        allow create: if request.auth != null &&
+          request.resource.data.customerId == request.auth.uid &&
+          request.resource.data.status    == 'PENDING'          &&
+          request.resource.data.paymentStatus == 'unpaid';
+
+        // Only the shop owner may update orders (status + paymentStatus changes)
+        allow update: if isOwner(tenantId);
+
+        // No client-side deletes
+        allow delete: if false;
+      }
+    }
+
+    // ── User data ──────────────────────────────────────────────────────────
+    match /users/{userId} {
+      // Top-level user doc (fcmToken …) — only the user themselves
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Order summaries (CustomerHomeViewModel, OrderHistoryScreen)
+      match /orders/{orderId} {
+        // Only the user reads their own history
+        allow read:   if request.auth != null && request.auth.uid == userId;
+
+        // User writes their own summary when placing an order
+        allow create: if request.auth != null && request.auth.uid == userId;
+
+        // Any authenticated user may update ONLY status / paymentStatus.
+        // Required because the business app syncs these fields to the
+        // customer's history directly from the client SDK (no Cloud Function).
+        allow update: if request.auth != null &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'paymentStatus']);
+
+        // Only the user can delete their own summary
+        allow delete: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+  }
+}

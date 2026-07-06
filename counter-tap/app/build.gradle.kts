@@ -89,6 +89,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.playservices)
 
     implementation(libs.coil.compose)
+    implementation(libs.androidx.splashscreen)
 
     implementation(libs.androidx.compose.material.icons.extended)
 

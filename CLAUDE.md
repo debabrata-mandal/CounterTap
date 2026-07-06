@@ -160,15 +160,16 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 - [x] `CustomerBottomNav` extracted to shared `ui/home/CustomerBottomNav.kt`
 
 ### Remaining
-- [ ] Firestore security rules (lock down from test mode before production)
+- [x] Firestore security rules — `firestore.rules` at repo root; deploy with `firebase deploy --only firestore:rules`
 - [ ] Dashboard design improvements (both apps)
-- [ ] App icons, splash screen, Play Store prep
+- [ ] App icons + splash screen
+- [ ] Play Store prep (release keystore, signed APK, store listing)
 
 ## Key Decisions Made
 
 1. **Google Sign-In via Firebase Auth** (not direct Google) — needed for Firestore security rules (request.auth.uid)
 2. **Cash-only payments v1** — UPI deep link attempted but GPay blocks `upi://pay` intents with pre-filled amount from unregistered apps; Razorpay UPI-only (0% fee) planned for v2
-3. **Single Firebase project** (countertap-dev) for dev — add countertap-prod at launch
+3. **Single Firebase project** (`countertap-dev`) serves as production — project ID is permanent and cannot be renamed; a separate prod project is not needed for a multi-tenant app at this scale
 4. **Monorepo** — both apps + shared module in one repo
 5. **KAPT** for Hilt (can migrate to KSP later)
 6. **OrderStatus** as String constants (not enum) for Firestore compatibility

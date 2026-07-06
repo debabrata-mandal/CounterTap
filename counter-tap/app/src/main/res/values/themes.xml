@@ -5,4 +5,11 @@
         <item name="android:windowTranslucentStatus">false</item>
         <item name="android:windowTranslucentNavigation">false</item>
     </style>
+
+    <!-- Splash screen theme — applied to the activity, transitions to Theme.CounterTap -->
+    <style name="Theme.CounterTap.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#101827</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.CounterTap</item>
+    </style>
 </resources>

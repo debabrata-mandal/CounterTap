@@ -4,23 +4,51 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Menu / order list icon — customer app -->
-    <!-- Document outline -->
+
+    <!-- Cup body (trapezoid — wider at top) -->
     <path
         android:fillColor="#FF2196F3"
-        android:pathData="M36,28 L36,80 L72,80 L72,44 L56,28 Z" />
-    <!-- Folded corner -->
+        android:pathData="M28,46 L24,78 Q54,86 84,78 L80,46 Z"/>
+
+    <!-- Cup rim (lighter ellipse) -->
     <path
-        android:fillColor="#FF1976D2"
-        android:pathData="M56,28 L56,44 L72,44 Z" />
-    <!-- Menu lines -->
+        android:fillColor="#FF64B5F6"
+        android:pathData="M28,46 Q54,54 80,46 Q54,38 28,46 Z"/>
+
+    <!-- Cup handle -->
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M43,52 L65,52 L65,55 L43,55 Z" />
+        android:fillColor="#00000000"
+        android:strokeColor="#FF64B5F6"
+        android:strokeWidth="5"
+        android:pathData="M84,54 Q96,54 96,65 Q96,76 84,76"/>
+
+    <!-- Saucer -->
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M43,59 L65,59 L65,62 L43,62 Z" />
+        android:fillColor="#FF1565C0"
+        android:pathData="M18,82 Q54,92 90,82 Q54,74 18,82 Z"/>
+
+    <!-- Steam line left -->
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M43,66 L58,66 L58,69 L43,69 Z" />
+        android:fillColor="#00000000"
+        android:strokeColor="#AAFFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M40,38 Q37,28 41,18"/>
+
+    <!-- Steam line center -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#AAFFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M54,36 Q51,26 55,16"/>
+
+    <!-- Steam line right -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#AAFFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M68,38 Q65,28 69,18"/>
+
 </vector>
