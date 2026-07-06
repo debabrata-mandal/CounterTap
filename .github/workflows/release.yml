@@ -25,10 +25,10 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Inject google-services.json (business app)
-        run: echo "${{ secrets.GOOGLE_SERVICES_JSON_BUSINESS }}" > counter-tap-business/app/google-services.json
+        run: echo "${{ secrets.GOOGLE_SERVICES_JSON_BUSINESS }}" | base64 --decode > counter-tap-business/app/google-services.json
 
       - name: Inject google-services.json (customer app)
-        run: echo "${{ secrets.GOOGLE_SERVICES_JSON_CUSTOMER }}" > counter-tap/app/google-services.json
+        run: echo "${{ secrets.GOOGLE_SERVICES_JSON_CUSTOMER }}" | base64 --decode > counter-tap/app/google-services.json
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
@@ -58,10 +58,10 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Inject google-services.json (business app)
-        run: echo "${{ secrets.GOOGLE_SERVICES_JSON_BUSINESS }}" > counter-tap-business/app/google-services.json
+        run: echo "${{ secrets.GOOGLE_SERVICES_JSON_BUSINESS }}" | base64 --decode > counter-tap-business/app/google-services.json
 
       - name: Inject google-services.json (customer app)
-        run: echo "${{ secrets.GOOGLE_SERVICES_JSON_CUSTOMER }}" > counter-tap/app/google-services.json
+        run: echo "${{ secrets.GOOGLE_SERVICES_JSON_CUSTOMER }}" | base64 --decode > counter-tap/app/google-services.json
 
       - name: Decode keystore
         run: echo "${{ secrets.KEYSTORE_FILE }}" | base64 --decode > keystore.jks
