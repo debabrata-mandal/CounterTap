@@ -3,6 +3,12 @@ name: PR Checks
 on:
   pull_request:
     branches: [ main ]
+    paths:
+      - '**/*.kt'
+      - '**/*.gradle.kts'
+      - '**/build.gradle'
+      - '**/AndroidManifest.xml'
+      - '**/res/**'
 
 jobs:
   lint-and-test:
@@ -48,6 +54,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
+          retention-days: 3
           path: |
             counter-tap-business/app/build/reports/
             counter-tap/app/build/reports/
