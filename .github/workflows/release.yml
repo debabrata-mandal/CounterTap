@@ -1,9 +1,7 @@
 name: Release
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -104,12 +102,14 @@ jobs:
         with:
           name: business-apk
           path: counter-tap-business/app/build/outputs/apk/release/countertap-business-v${{ steps.version.outputs.name }}.apk
+          retention-days: 1
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
           name: business-aab
           path: counter-tap-business/app/build/outputs/bundle/release/countertap-business-v${{ steps.version.outputs.name }}.aab
+          retention-days: 1
 
   # ── Job 3: Build customer app (runs in parallel with job 2) ───────────────
   build-customer:
@@ -173,12 +173,14 @@ jobs:
         with:
           name: customer-apk
           path: counter-tap/app/build/outputs/apk/release/countertap-v${{ steps.version.outputs.name }}.apk
+          retention-days: 1
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
           name: customer-aab
           path: counter-tap/app/build/outputs/bundle/release/countertap-v${{ steps.version.outputs.name }}.aab
+          retention-days: 1
 
   # ── Job 4: Publish to GitHub Releases ─────────────────────────────────────
   publish:
