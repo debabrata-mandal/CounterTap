@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -119,6 +118,28 @@ fun CustomerHomeScreen(
 
                 // Active order cards
                 if (state.activeOrders.isNotEmpty()) {
+                    item {
+                        Row(
+                            modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(3.dp)
+                                    .height(14.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(WarningOrange)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "ACTIVE ORDERS",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = WarningOrange,
+                                letterSpacing = 1.5.sp
+                            )
+                        }
+                    }
                     items(state.activeOrders, key = { it.orderId }) { order ->
                         ActiveOrderCard(
                             info = order,
@@ -181,16 +202,28 @@ fun CustomerHomeScreen(
                         }
                     }
                 } else {
-                    // Recent Restaurants header
+                    // Recent Restaurants section header — accent bar pattern
                     item {
-                        Text(
-                            "Recent Restaurants",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextHint,
-                            letterSpacing = 1.sp,
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
-                        )
+                        Row(
+                            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(3.dp)
+                                    .height(14.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(AccentBlue)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "RECENT RESTAURANTS",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AccentBlue,
+                                letterSpacing = 1.5.sp
+                            )
+                        }
                     }
 
                     items(state.recentShops, key = { it.tenantId }) { shop ->
@@ -306,7 +339,7 @@ private fun ActiveOrderCard(info: ActiveOrderInfo, onClick: () -> Unit) {
 
         Spacer(Modifier.height(5.dp))
 
-        // Labels row — separate from dots so alignment is clean
+        // Labels row
         Row(modifier = Modifier.fillMaxWidth()) {
             stepLabels.forEachIndexed { index, label ->
                 val isDone = index < currentStep
@@ -405,7 +438,7 @@ private fun ShopCard(shop: ShopRecord, onClick: () -> Unit) {
             colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
             shape = RoundedCornerShape(8.dp)
         ) {
-            Text("Open", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Text("Order", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
         }
     }
 }

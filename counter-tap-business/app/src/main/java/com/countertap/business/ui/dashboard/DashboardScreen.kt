@@ -17,12 +17,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Pending
+import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.automirrored.filled.TrendingFlat
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -31,7 +35,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,6 +54,9 @@ import com.countertap.business.ui.theme.WarningOrange
 import com.countertap.business.viewmodel.DashboardViewModel
 import com.countertap.shared.Order
 import com.countertap.shared.OrderStatus
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun DashboardScreen(
@@ -95,52 +104,79 @@ fun DashboardScreen(
                         ) {
                             Column {
                                 Text(
-                                    "Dashboard",
+                                    SimpleDateFormat("EEEE, d MMM", Locale.getDefault()).format(Date()),
+                                    fontSize = 12.sp,
+                                    color = TextSecondary
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    state.shopName.ifBlank { "Dashboard" },
                                     fontSize = 22.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimary
                                 )
-                                if (state.shopName.isNotBlank()) {
-                                    Text(
-                                        state.shopName,
-                                        fontSize = 13.sp,
-                                        color = TextSecondary
-                                    )
-                                }
                             }
-                            IconButton(onClick = {}) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(AccentBlue.copy(alpha = 0.12f))
+                            ) {
                                 Icon(
-                                    Icons.Default.Notifications,
-                                    contentDescription = "Notifications",
+                                    Icons.Default.Storefront,
+                                    contentDescription = null,
                                     tint = AccentBlue,
-                                    modifier = Modifier.size(24.dp)
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
                     }
 
-                    // Revenue section
+                    // Revenue card with accent left bar
                     item {
-                        Column(
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 20.dp, vertical = 4.dp)
+                                .height(IntrinsicSize.Min)
                                 .clip(RoundedCornerShape(16.dp))
                                 .background(CardBackground)
-                                .padding(horizontal = 20.dp, vertical = 20.dp)
                         ) {
-                            Text(
-                                "₹${state.todayRevenue}",
-                                fontSize = 36.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary
+                            Box(
+                                modifier = Modifier
+                                    .width(4.dp)
+                                    .fillMaxHeight()
+                                    .background(AccentBlue)
                             )
-                            Spacer(Modifier.height(2.dp))
-                            Text(
-                                "today's revenue",
-                                fontSize = 12.sp,
-                                color = TextHint
-                            )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp, vertical = 20.dp)
+                            ) {
+                                Text(
+                                    "TODAY'S REVENUE",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextHint,
+                                    letterSpacing = 1.sp
+                                )
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    "₹${state.todayRevenue}",
+                                    fontSize = 38.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                                if (state.totalOrders > 0) {
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        "from ${state.totalOrders} order${if (state.totalOrders != 1) "s" else ""} today",
+                                        fontSize = 12.sp,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -157,14 +193,16 @@ fun DashboardScreen(
                                 StatCard(
                                     label = "PENDING",
                                     value = state.pendingCount.toString(),
-                                    valueColor = WarningOrange
+                                    valueColor = WarningOrange,
+                                    icon = Icons.Default.Pending
                                 )
                             }
                             Box(modifier = Modifier.weight(1f)) {
                                 StatCard(
                                     label = "COMPLETED",
                                     value = state.completedCount.toString(),
-                                    valueColor = SuccessGreen
+                                    valueColor = SuccessGreen,
+                                    icon = Icons.Default.CheckCircle
                                 )
                             }
                         }
@@ -179,14 +217,16 @@ fun DashboardScreen(
                                 StatCard(
                                     label = "TOTAL ORDERS",
                                     value = state.totalOrders.toString(),
-                                    valueColor = AccentBlue
+                                    valueColor = AccentBlue,
+                                    icon = Icons.Default.Receipt
                                 )
                             }
                             Box(modifier = Modifier.weight(1f)) {
                                 StatCard(
                                     label = "AVG ORDER",
                                     value = "₹${state.avgOrder}",
-                                    valueColor = TextPrimary
+                                    valueColor = TextPrimary,
+                                    icon = Icons.AutoMirrored.Filled.TrendingFlat
                                 )
                             }
                         }
@@ -265,14 +305,25 @@ fun DashboardScreen(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(
-                                            name,
-                                            fontSize = 14.sp,
-                                            color = TextPrimary,
-                                            modifier = Modifier.weight(1f),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Text(
+                                                "${index + 1}",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = TextHint,
+                                                modifier = Modifier.width(18.dp)
+                                            )
+                                            Text(
+                                                name,
+                                                fontSize = 14.sp,
+                                                color = TextPrimary,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
                                         Text(
                                             "$qty sold",
                                             fontSize = 13.sp,
@@ -285,20 +336,47 @@ fun DashboardScreen(
                         }
                     }
 
-                    // No orders today empty state
+                    // Empty state
                     if (state.totalOrders == 0 && state.activeOrders.isEmpty()) {
                         item {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(40.dp),
+                                    .padding(top = 48.dp, start = 40.dp, end = 40.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    "No orders yet today",
-                                    fontSize = 15.sp,
-                                    color = TextSecondary
-                                )
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier
+                                            .size(72.dp)
+                                            .clip(CircleShape)
+                                            .background(AccentBlue.copy(alpha = 0.10f))
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Receipt,
+                                            contentDescription = null,
+                                            tint = AccentBlue,
+                                            modifier = Modifier.size(34.dp)
+                                        )
+                                    }
+                                    Spacer(Modifier.height(16.dp))
+                                    Text(
+                                        "No orders yet today",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = TextSecondary,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Spacer(Modifier.height(6.dp))
+                                    Text(
+                                        "Share your QR code to start\nreceiving orders",
+                                        fontSize = 13.sp,
+                                        color = TextHint,
+                                        textAlign = TextAlign.Center,
+                                        lineHeight = 19.sp
+                                    )
+                                }
                             }
                         }
                     }
@@ -311,17 +389,29 @@ fun DashboardScreen(
 }
 
 @Composable
-private fun StatCard(label: String, value: String, valueColor: Color) {
+private fun StatCard(label: String, value: String, valueColor: Color, icon: ImageVector) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(CardBackground)
-            .padding(12.dp)
+            .padding(14.dp)
     ) {
-        Text(value, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = valueColor)
-        Spacer(Modifier.height(2.dp))
-        Text(label, fontSize = 9.sp, color = TextHint)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
+            Text(value, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = valueColor)
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = valueColor.copy(alpha = 0.5f),
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(label, fontSize = 9.sp, color = TextHint, letterSpacing = 0.8.sp)
     }
 }
 

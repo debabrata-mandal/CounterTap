@@ -1,3 +1,5 @@
+@file:OptIn(androidx.camera.core.ExperimentalGetImage::class)
+
 package com.countertap.customer.ui.scanner
 
 import android.Manifest
@@ -6,7 +8,9 @@ import android.util.Size
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -170,6 +174,7 @@ fun ScannerScreen(onScanned: (String) -> Unit) {
 }
 
 @Composable
+@OptIn(ExperimentalGetImage::class)
 private fun CameraPreview(onScanned: (String) -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -187,26 +192,32 @@ private fun CameraPreview(onScanned: (String) -> Unit) {
             .setTargetResolution(Size(1280, 720))
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build()
-        analysis.setAnalyzer(executor) { imageProxy ->
-            if (scanned) { imageProxy.close(); return@setAnalyzer }
-            val mediaImage = imageProxy.image
-            if (mediaImage != null) {
-                val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-                scanner.process(image)
-                    .addOnSuccessListener { barcodes ->
-                        barcodes.firstOrNull { !it.rawValue.isNullOrBlank() }
-                            ?.rawValue?.let { value ->
-                                if (!scanned) {
-                                    scanned = true
-                                    onScanned(value)
-                                }
+        analysis.setAnalyzer(
+            executor,
+            object : ImageAnalysis.Analyzer {
+                @ExperimentalGetImage
+                override fun analyze(imageProxy: ImageProxy) {
+                    if (scanned) { imageProxy.close(); return }
+                    val mediaImage = imageProxy.image
+                    if (mediaImage != null) {
+                        val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+                        scanner.process(image)
+                            .addOnSuccessListener { barcodes ->
+                                barcodes.firstOrNull { !it.rawValue.isNullOrBlank() }
+                                    ?.rawValue?.let { value ->
+                                        if (!scanned) {
+                                            scanned = true
+                                            onScanned(value)
+                                        }
+                                    }
                             }
+                            .addOnCompleteListener { imageProxy.close() }
+                    } else {
+                        imageProxy.close()
                     }
-                    .addOnCompleteListener { imageProxy.close() }
-            } else {
-                imageProxy.close()
+                }
             }
-        }
+        )
         cameraProvider.unbindAll()
         cameraProvider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
     }
