@@ -24,7 +24,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Pending
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Storefront
-import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.automirrored.filled.TrendingFlat
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -226,7 +226,7 @@ fun DashboardScreen(
                                     label = "AVG ORDER",
                                     value = "₹${state.avgOrder}",
                                     valueColor = TextPrimary,
-                                    icon = Icons.Default.TrendingUp
+                                    icon = Icons.AutoMirrored.Filled.TrendingFlat
                                 )
                             }
                         }
