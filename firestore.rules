@@ -9,6 +9,17 @@ service cloud.firestore {
           == request.auth.uid;
     }
 
+    function isTenantOwnerForUserOrder(userId, orderId, tenantId) {
+      return request.auth != null &&
+        tenantId is string &&
+        tenantId.size() > 0 &&
+        get(/databases/$(database)/documents/tenants/$(tenantId)).data.ownerId
+          == request.auth.uid &&
+        exists(/databases/$(database)/documents/tenants/$(tenantId)/orders/$(orderId)) &&
+        getAfter(/databases/$(database)/documents/tenants/$(tenantId)/orders/$(orderId)).data.customerId
+          == userId;
+    }
+
     // ── Tenant (shop) ──────────────────────────────────────────────────────
     match /tenants/{tenantId} {
       // Any signed-in user can read shop info (needed to browse menu)
@@ -71,12 +82,23 @@ service cloud.firestore {
         // User writes their own summary when placing an order
         allow create: if request.auth != null && request.auth.uid == userId;
 
-        // Any authenticated user may update ONLY status / paymentStatus.
-        // Required because the business app syncs these fields to the
-        // customer's history directly from the client SDK (no Cloud Function).
+        // Update allowed only for:
+        // 1) the user themselves, or
+        // 2) the owning shop account for the linked tenant order.
+        // Updates are restricted to status/paymentStatus only.
         allow update: if request.auth != null &&
-          request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['status', 'paymentStatus']);
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'paymentStatus']) &&
+          (
+            request.auth.uid == userId ||
+            (
+              request.resource.data.tenantId == resource.data.tenantId &&
+              isTenantOwnerForUserOrder(userId, orderId, resource.data.tenantId) &&
+              request.resource.data.status ==
+                getAfter(/databases/$(database)/documents/tenants/$(resource.data.tenantId)/orders/$(orderId)).data.status &&
+              request.resource.data.paymentStatus ==
+                getAfter(/databases/$(database)/documents/tenants/$(resource.data.tenantId)/orders/$(orderId)).data.paymentStatus
+            )
+          );
 
         // Only the user can delete their own summary
         allow delete: if request.auth != null && request.auth.uid == userId;
