@@ -1,3 +1,5 @@
+@file:OptIn(androidx.camera.core.ExperimentalGetImage::class)
+
 package com.countertap.customer.ui.scanner
 
 import android.Manifest
