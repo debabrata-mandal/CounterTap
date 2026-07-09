@@ -139,7 +139,7 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 - [x] Customer app: active order cards with status timeline — all active orders shown, each tappable
 - [x] Customer app: bottom nav (Home | My Orders | Scan) — persistent on both Home and My Orders screens
 - [x] Business app: dashboard active order cards tappable — navigates to Orders tab
-- [ ] Dashboard design improvements (both apps) — deferred
+- [x] Dashboard design improvements (both apps) — done
 
 ### Phase 5 — Payments ✅ (v1 Cash-only)
 - [x] **Cash-only payment** — UPI deep link abandoned (GPay blocks amount pre-fill from unregistered apps)
@@ -159,11 +159,24 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 - [x] My Orders screen: bottom nav visible, no back button needed
 - [x] `CustomerBottomNav` extracted to shared `ui/home/CustomerBottomNav.kt`
 
+### Bug fixes (2026-07-09)
+- [x] `pr-checks.yml` — google-services.json injection was missing `| base64 --decode`; secrets are base64-encoded so plain `echo` produced corrupt JSON
+
+### Dashboard design improvements (2026-07-09) ✅
+- [x] Business dashboard: date in header ("Wednesday, 9 Jul"), storefront icon replaces dead notification bell
+- [x] Business dashboard: revenue card has accent left bar + "from N orders today" subtitle
+- [x] Business dashboard: stat cards have contextual icons (Pending, CheckCircle, Receipt, TrendingUp)
+- [x] Business dashboard: empty state upgraded to icon + "Share your QR code to start receiving orders"
+- [x] Business dashboard: best sellers list shows rank numbers (1, 2, 3)
+- [x] Customer home: accent-bar section header for "RECENT RESTAURANTS" (consistent with business app style)
+- [x] Customer home: accent-bar section header for "ACTIVE ORDERS" (orange, matching order status color)
+- [x] Customer home: shop card "Open" button renamed to "Order"
+
 ### Remaining
 - [x] Firestore security rules — `firestore.rules` at repo root; deploy with `firebase deploy --only firestore:rules`
-- [ ] Dashboard design improvements (both apps)
-- [ ] App icons + splash screen
-- [ ] Play Store prep (release keystore, signed APK, store listing)
+- [x] Dashboard design improvements (both apps)
+- [x] App icons + splash screen — storefront (business), tea cup (customer); `androidx.core:core-splashscreen` 700ms hold
+- [ ] Play Store prep — needs Google Play Developer account ($25 one-time fee)
 
 ## Key Decisions Made
 
@@ -208,5 +221,6 @@ For full-screen screens without bottom nav, add `statusBarsPadding()` to the top
 
 1. Read this file
 2. Check git log for latest commit
-3. Continue from **Remaining** section above — Firestore security rules is highest priority before real users
+3. **Only remaining work**: Play Store prep — requires creating a Google Play Developer account ($25 one-time fee at play.google.com/console), then a service account JSON for the API upload job in `release.yml`
 4. Cloud Functions already deployed to `countertap-dev` (asia-south1)
+5. CI/CD: `release.yml` triggers on every push to main, auto-publishes APK + AAB to GitHub Releases; Play Store upload job is stubbed out at the bottom — uncomment when account is ready
