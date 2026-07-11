@@ -227,23 +227,35 @@ private fun OrderCard(
             HorizontalDivider(color = DividerColor)
             Spacer(modifier = Modifier.height(8.dp))
             order.items.forEach { item ->
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 2.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(vertical = 2.dp)
                 ) {
-                    Text(
-                        "${item.quantity}×  ${item.productName}",
-                        fontSize = 14.sp,
-                        color = TextPrimary,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Text(
-                        "₹${(item.price * item.quantity).toInt()}",
-                        fontSize = 14.sp,
-                        color = TextSecondary
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            "${item.quantity}×  ${item.productName}",
+                            fontSize = 14.sp,
+                            color = TextPrimary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            "₹${(item.price * item.quantity).toInt()}",
+                            fontSize = 14.sp,
+                            color = TextSecondary
+                        )
+                    }
+                    if (item.selectedOptions.isNotEmpty()) {
+                        Text(
+                            text = item.selectedOptions.joinToString(" · ") { it.optionName },
+                            fontSize = 11.sp,
+                            color = AccentBlue,
+                            modifier = Modifier.padding(start = 22.dp, top = 1.dp, bottom = 2.dp)
+                        )
+                    }
                 }
             }
 
