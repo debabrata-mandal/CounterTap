@@ -65,7 +65,7 @@ fun AppNavGraph(startDestination: String) {
         }
 
         composable(Routes.ADD_PRODUCT) {
-            val menuViewModel: MenuViewModel = hiltViewModel()
+            val menuViewModel: MenuViewModel = hiltViewModel(navController.getBackStackEntry(Routes.HOME))
             AddEditProductScreen(
                 existingProduct = null,
                 onDone = { navController.popBackStack() },
@@ -75,7 +75,7 @@ fun AppNavGraph(startDestination: String) {
 
         composable(Routes.EDIT_PRODUCT) { backStackEntry ->
             val productId = backStackEntry.arguments?.getString("productId") ?: ""
-            val menuViewModel: MenuViewModel = hiltViewModel()
+            val menuViewModel: MenuViewModel = hiltViewModel(navController.getBackStackEntry(Routes.HOME))
             val uiState by menuViewModel.uiState.collectAsState()
             val product = uiState.products.find { it.id == productId }
             AddEditProductScreen(
@@ -86,7 +86,7 @@ fun AppNavGraph(startDestination: String) {
         }
 
         composable(Routes.CATEGORIES) {
-            val menuViewModel: MenuViewModel = hiltViewModel()
+            val menuViewModel: MenuViewModel = hiltViewModel(navController.getBackStackEntry(Routes.HOME))
             CategoryScreen(
                 onBack = { navController.popBackStack() },
                 viewModel = menuViewModel
