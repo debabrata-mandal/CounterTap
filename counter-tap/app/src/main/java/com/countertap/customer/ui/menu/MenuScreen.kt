@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -48,6 +49,7 @@ import com.countertap.customer.ui.theme.CardBackground
 import com.countertap.customer.ui.theme.CardElevated
 import com.countertap.customer.ui.theme.TextPrimary
 import com.countertap.customer.ui.theme.TextSecondary
+import com.countertap.customer.ui.theme.WarningOrange
 import com.countertap.customer.viewmodel.CartViewModel
 import com.countertap.customer.viewmodel.MenuViewModel
 import com.countertap.shared.Product
@@ -62,7 +64,8 @@ fun MenuScreen(
 ) {
     val uiState by menuViewModel.uiState.collectAsState()
     val cartItems by cartViewModel.items.collectAsState()
-    val cartCount = cartItems.sumOf { it.quantity }
+    val isShopOpen = uiState.shop?.active ?: true
+    val cartCount = if (isShopOpen) cartItems.sumOf { it.quantity } else 0
 
     LaunchedEffect(tenantId) { menuViewModel.loadShop(tenantId) }
 
@@ -100,6 +103,38 @@ fun MenuScreen(
                         contentDescription = "Change Restaurant",
                         tint = AccentBlue
                     )
+                }
+            }
+
+            // Closed banner
+            if (!isShopOpen && uiState.shop != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(WarningOrange.copy(alpha = 0.15f))
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = WarningOrange,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Column {
+                        Text(
+                            "Shop is currently closed",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = WarningOrange
+                        )
+                        Text(
+                            "You can browse the menu but cannot place orders",
+                            fontSize = 12.sp,
+                            color = TextSecondary
+                        )
+                    }
                 }
             }
 
@@ -143,7 +178,8 @@ fun MenuScreen(
                                             product = product,
                                             quantity = cartItems.find { it.product.id == product.id }?.quantity ?: 0,
                                             onAdd = { cartViewModel.add(product) },
-                                            onRemove = { cartViewModel.remove(product) }
+                                            onRemove = { cartViewModel.remove(product) },
+                                            isShopOpen = isShopOpen
                                         )
                                     }
                                 }
@@ -157,7 +193,8 @@ fun MenuScreen(
                                         product = product,
                                         quantity = cartViewModel.quantityOf(product.id),
                                         onAdd = { cartViewModel.add(product) },
-                                        onRemove = { cartViewModel.remove(product) }
+                                        onRemove = { cartViewModel.remove(product) },
+                                        isShopOpen = isShopOpen
                                     )
                                 }
                             }
@@ -221,7 +258,8 @@ private fun ProductCard(
     product: Product,
     quantity: Int,
     onAdd: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    isShopOpen: Boolean = true
 ) {
     Row(
         modifier = Modifier
@@ -277,34 +315,36 @@ private fun ProductCard(
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        if (quantity == 0) {
-            Button(
-                onClick = onAdd,
-                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.height(36.dp)
-            ) {
-                Text("ADD", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-            }
-        } else {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(CardElevated)
-            ) {
-                IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.Remove, contentDescription = "Remove", tint = AccentBlue, modifier = Modifier.size(16.dp))
+        if (isShopOpen) {
+            if (quantity == 0) {
+                Button(
+                    onClick = onAdd,
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text("ADD", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                 }
-                Text(
-                    text = quantity.toString(),
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
-                    modifier = Modifier.padding(horizontal = 2.dp)
-                )
-                IconButton(onClick = onAdd, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.Add, contentDescription = "Add", tint = AccentBlue, modifier = Modifier.size(16.dp))
+            } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(CardElevated)
+                ) {
+                    IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
+                        Icon(Icons.Default.Remove, contentDescription = "Remove", tint = AccentBlue, modifier = Modifier.size(16.dp))
+                    }
+                    Text(
+                        text = quantity.toString(),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        modifier = Modifier.padding(horizontal = 2.dp)
+                    )
+                    IconButton(onClick = onAdd, modifier = Modifier.size(36.dp)) {
+                        Icon(Icons.Default.Add, contentDescription = "Add", tint = AccentBlue, modifier = Modifier.size(16.dp))
+                    }
                 }
             }
         }
