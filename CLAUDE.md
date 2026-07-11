@@ -46,8 +46,8 @@ Local: C:\Github\default\CounterTap
 
 ```
 tenants/{tenantId}/
-  products/{productId}     — Product data (available:bool, categoryId:string)
-  orders/{orderId}         — Order data (status, paymentStatus, note, items[], customerId)
+  products/{productId}     — Product data (available:bool, categoryId:string, optionGroups:[])
+  orders/{orderId}         — Order data (status, paymentStatus, note, items[], customerId); each item has selectedOptions:[]
   categories/{categoryId}  — Menu categories (name, order:int)
 users/{userId}/
   fcmToken                 — FCM device token (saved by business app on startup)
@@ -58,7 +58,7 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 
 ## Current Phase
 
-**Phase 6 — Dashboards + Payments (IN PROGRESS — design improvements pending)**
+**Phase 7 — Product Options / Variants (COMPLETE)**
 
 ## Completed Work
 
@@ -172,6 +172,23 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 - [x] Customer home: accent-bar section header for "ACTIVE ORDERS" (orange, matching order status color)
 - [x] Customer home: shop card "Open" button renamed to "Order"
 
+### Work done (2026-07-11) ✅
+
+#### Feature: Product Options / Variants
+- [x] `shared/Models.kt` — added `ProductOption`, `OptionGroup`, `SelectedOption` data classes; `Product.optionGroups: List<OptionGroup>`; `OrderItem.selectedOptions: List<SelectedOption>`
+- [x] Business app `AddEditProductScreen` — "Options / Variants" section: add/remove option groups, each group has name, Required toggle, Multi-select toggle, list of options with name + price addon (+₹); uses `UUID.randomUUID()` for group/option IDs
+- [x] Customer app `CartViewModel` — `CartItem` now carries `selectedOptions: List<SelectedOption>` and `unitPrice: Double`; added `addConfigured()`/`removeConfigured()`; `quantityOf()` sums all combos; `totalAmount` uses `unitPrice`; `placeOrder` stores `selectedOptions` on each `OrderItem`
+- [x] Customer app `MenuScreen` — products with options show "Customisable" badge; ADD button opens `OptionPickerSheet` (ModalBottomSheet); RadioButton for single-select groups, Checkbox for multi-select; required groups block "Add to Cart" until selection made; price addon shown per option; "N in cart +" badge when quantity > 0 for option products; cart bar total uses `unitPrice`
+- [x] Customer app `CartScreen` — selected options shown in blue below product name ("Sugar: With Sugar · Milk: Full Milk"); unit price shown as "₹X each"; stepper calls `addConfigured`/`removeConfigured` with the item's `selectedOptions`
+- [x] Business app `OrdersScreen` — selected options shown in blue below each product name in order cards so owner can see exactly what customer chose
+
+#### Bug fixes
+- [x] `AddEditProductScreen` toggle overlap — `Switch(Modifier.size(32.dp))` was smaller than minimum touch target; replaced side-by-side layout with full-width label-left / switch-right rows
+- [x] Business app orders missing customization details — `OrdersScreen` items loop now shows `selectedOptions` indented beneath each product name
+
+#### UI improvements
+- [x] Business app `CategoryScreen` — redesigned from plain list to 2-column grid of square tiles; each tile has emoji illustration (auto-detected from 30+ keyword rules: tea→☕, biryani→🍚, momos→🥟, etc.) on a coloured gradient background, category name + item count in a darker strip below; delete button as translucent overlay in top-right corner; empty state with 🗂️ illustration; emoji are standard Unicode rendered as large `Text` — no assets or internet required
+
 ### Remaining
 - [x] Firestore security rules — `firestore.rules` at repo root; deploy with `firebase deploy --only firestore:rules`
 - [x] Dashboard design improvements (both apps)
@@ -192,6 +209,9 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 10. **FCM token storage** — business app saves token to `users/{uid}.fcmToken` using `SetOptions.merge()` so it doesn't overwrite other user fields; `CounterTapMessagingService.onNewToken()` also updates it when the token rotates
 11. **Cloud Function** — `functions/index.js` at repo root; uses Firebase Functions v2 (`onDocumentCreated`); requires Node 20; deploy with `firebase deploy --only functions` from `functions/` dir
 9. **Left accent bar pattern** — use `Row` + `height(IntrinsicSize.Min)` + `Box(Modifier.width(4.dp).fillMaxHeight())` for left border in card items; never use `fillMaxHeight()` inside a wrapping `Box` (gives 0 or unbounded height in lazy lists)
+13. **Product options / CartItem keying** — each unique (productId + selectedOptions) combo is a separate `CartItem`; `SelectedOption` is a data class so list equality works for matching; `quantityOf(productId)` sums across all combos for the "N in cart" badge; `addConfigured`/`removeConfigured` are the canonical mutators — `add`/`remove` delegate to them with `emptyList()`
+14. **Category emoji tiles** — emoji auto-detected from category name via keyword lookup (`categoryEmoji()`); colour derived from `abs(name.hashCode()) % palette.size`; rendered as `Text(emoji, fontSize = 52.sp)` over a `color.copy(alpha = 0.18f)` background — no assets, no internet
+15. **Switch size constraint bug** — never apply `Modifier.size()` to a `Switch`; the minimum touch target is 48×48dp and clipping it causes visual overlap with adjacent composables; use a `SpaceBetween` Row with label on left and Switch on right instead
 
 ## CRITICAL: Bottom Nav / Inset Rule
 
