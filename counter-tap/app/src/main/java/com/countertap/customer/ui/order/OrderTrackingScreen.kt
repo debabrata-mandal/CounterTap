@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.TableRestaurant
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -148,6 +149,8 @@ fun OrderTrackingScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         if (order.paymentStatus == "paid") {
                             PaymentConfirmedBanner()
+                        } else if (order.tableName.isNotBlank()) {
+                            TableTabReminder(tableName = order.tableName)
                         } else {
                             CashPaymentReminder(amount = order.totalAmount.toInt())
                         }
@@ -300,6 +303,34 @@ private fun CashPaymentReminder(amount: Int) {
             )
             Text(
                 "Please keep exact change ready",
+                fontSize = 12.sp,
+                color = TextSecondary
+            )
+        }
+    }
+}
+
+@Composable
+private fun TableTabReminder(tableName: String) {
+    Row(
+        modifier = androidx.compose.ui.Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(AccentBlue.copy(alpha = 0.1f))
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(Icons.Default.TableRestaurant, contentDescription = null, tint = AccentBlue, modifier = Modifier.size(22.dp))
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                "Added to $tableName's tab",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = AccentBlue
+            )
+            Text(
+                "Pay when you're done — settle with the shop at the end",
                 fontSize = 12.sp,
                 color = TextSecondary
             )

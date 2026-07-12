@@ -53,6 +53,8 @@ data class Order(
     val paymentMethod: String = PaymentMethod.CASH,
     val upiTransactionId: String = "",
     val note: String = "",
+    val tableSessionId: String = "",
+    val tableName: String = "",
     @ServerTimestamp val createdAt: Date? = null
 )
 
@@ -64,7 +66,28 @@ object PaymentStatus {
 object PaymentMethod {
     const val UPI = "upi"
     const val CASH = "cash"
+    const val CREDIT = "credit"
 }
+
+object CreditLineStatus {
+    const val PENDING = "pending"
+    const val ACTIVE = "active"
+    const val REJECTED = "rejected"
+}
+
+data class CreditLine(
+    @DocumentId val id: String = "",
+    val customerId: String = "",
+    val customerName: String = "",
+    val customerEmail: String = "",
+    val tenantId: String = "",
+    val shopName: String = "",
+    val limit: Double = 0.0,
+    val balance: Double = 0.0,
+    val status: String = CreditLineStatus.PENDING,
+    @ServerTimestamp val requestedAt: Date? = null,
+    val approvedAt: Date? = null
+)
 
 data class OrderItem(
     val productId: String = "",
@@ -82,6 +105,32 @@ object OrderStatus {
     const val COMPLETED = "COMPLETED"
     const val CANCELLED = "CANCELLED"
 }
+
+data class Table(
+    @DocumentId val id: String = "",
+    val name: String = "",
+    val description: String = "",
+    @ServerTimestamp val createdAt: Date? = null
+)
+
+object TableSessionStatus {
+    const val OPEN = "open"
+    const val CLOSED = "closed"
+}
+
+data class TableSession(
+    @DocumentId val id: String = "",
+    val tableId: String = "",
+    val tableName: String = "",
+    val status: String = TableSessionStatus.OPEN,
+    @ServerTimestamp val openedAt: Date? = null,
+    val closedAt: Date? = null,
+    val orderIds: List<String> = emptyList(),
+    val customerIds: List<String> = emptyList(),
+    val totalAmount: Double = 0.0,
+    val paymentStatus: String = PaymentStatus.UNPAID,
+    val paidVia: String = ""
+)
 
 data class Shop(
     @DocumentId val id: String = "",

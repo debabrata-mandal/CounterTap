@@ -36,6 +36,7 @@ fun AppNavGraph(startDestination: String) {
         composable(Routes.HOME) {
             CustomerHomeScreen(
                 onOpenMenu = { tenantId ->
+                    // Navigate directly to menu for recent restaurants (no table picker)
                     navController.navigate(Routes.menu(tenantId))
                 },
                 onScanNew = {
@@ -81,7 +82,6 @@ fun AppNavGraph(startDestination: String) {
             arguments = listOf(navArgument("tenantId") { type = NavType.StringType })
         ) { menuEntry ->
             val tenantId = menuEntry.arguments?.getString("tenantId") ?: return@composable
-            // CartViewModel scoped to this menu back-stack entry so it can be shared with cart
             val cartViewModel: CartViewModel = hiltViewModel(menuEntry)
             MenuScreen(
                 tenantId = tenantId,

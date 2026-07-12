@@ -1,7 +1,7 @@
 # CounterTap — Claude Context File
 
 This file helps Claude quickly understand the project state in any new session.
-Read this + PLAN.md before making any changes.
+Read this file before making any changes.
 
 ## What This Project Is
 
@@ -46,19 +46,29 @@ Local: C:\Github\default\CounterTap
 
 ```
 tenants/{tenantId}/
-  products/{productId}     — Product data (available:bool, categoryId:string, optionGroups:[])
-  orders/{orderId}         — Order data (status, paymentStatus, note, items[], customerId); each item has selectedOptions:[]
-  categories/{categoryId}  — Menu categories (name, order:int)
+  products/{productId}       — Product data (available:bool, categoryId:string, optionGroups:[])
+  orders/{orderId}           — Order data (status, paymentStatus, paymentMethod, note, items[], customerId, tableSessionId?); each item has selectedOptions:[]
+  categories/{categoryId}    — Menu categories (name, order:int)
+  tables/{tableId}           — (Phase 8A) Table definitions: name, createdAt
+  tableSessions/{sessionId}  — (Phase 8A) Active/closed sessions: tableId, tableName, status, openedAt, closedAt?, orderIds[], customerIds[], totalAmount, paymentStatus, paidVia?
+  creditLines/{customerId}   — (Phase 8C) Credit line per customer: customerId, customerName, customerEmail, limit, balance, status, requestedAt, approvedAt?
 users/{userId}/
-  fcmToken                 — FCM device token (saved by business app on startup)
-  orders/{orderId}         — UserOrderSummary: tenantId, shopName, status, totalAmount, items, note, createdAt
+  fcmToken                   — FCM device token (saved by business app on startup)
+  orders/{orderId}           — UserOrderSummary: tenantId, shopName, status, totalAmount, items, note, createdAt
+  creditLines/{tenantId}     — (Phase 8C) Mirror of tenant credit line for customer app: tenantId, shopName, limit, balance, status
 ```
 
 Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 
 ## Current Phase
 
-**Phase 7 — Product Options / Variants (COMPLETE)**
+**Phase 8 — Tables, Hamburger Menu & Credit Lines ✅ COMPLETE**
+All three sub-phases shipped in branch `feature/credite-line` (PR open against main):
+- **8A** — Tables (opt-in collective billing; invisible to shops with no tables)
+- **8B** — Hamburger menu in business app: edit shop details, edit UPI, access credit lines
+- **8C** — Credit lines: customer requests credit, owner approves with limit, cart charges to credit
+
+**App version bumped to 2.0 (versionCode 2)** for both apps.
 
 ## Completed Work
 
@@ -189,13 +199,89 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 #### UI improvements
 - [x] Business app `CategoryScreen` — redesigned from plain list to 2-column grid of square tiles; each tile has emoji illustration (auto-detected from 30+ keyword rules: tea→☕, biryani→🍚, momos→🥟, etc.) on a coloured gradient background, category name + item count in a darker strip below; delete button as translucent overlay in top-right corner; empty state with 🗂️ illustration; emoji are standard Unicode rendered as large `Text` — no assets or internet required
 
-### Remaining
+### Remaining (pre-Phase 8)
 - [x] Firestore security rules — `firestore.rules` at repo root; deploy with `firebase deploy --only firestore:rules`
 - [x] Dashboard design improvements (both apps)
 - [x] App icons + splash screen — storefront (business), tea cup (customer); `androidx.core:core-splashscreen` 700ms hold
 - [ ] Play Store prep — needs Google Play Developer account ($25 one-time fee)
 
-## Key Decisions Made
+### Phase 8A — Tables (opt-in collective billing) ✅
+- [x] `shared/Models.kt` — added `Table`, `TableSession`, `TableSessionStatus`; added `tableSessionId` + `tableName` to `Order`
+- [x] `TablesRepository` (business + customer) — CRUD tables, create/close sessions, addOrderToSession (FieldValue.arrayUnion + increment)
+- [x] Business app: `TableManagementScreen` — list/add/delete tables; session cards with close; empty state
+- [x] Business app: Orders tab gets Individual / Tables sub-tabs (auto-shown when table orders exist)
+- [x] Business app bottom nav: Tables tab (Dashboard | Orders | Menu | Tables | QR)
+- [x] Customer app: `TableContextHolder` singleton + `TablePickerViewModel` — fetches tables, creates/joins session
+- [x] Customer app: `CartViewModel.placeOrder` embeds `tableSessionId`/`tableName`; calls `addOrderToSession`; clears context after
+- [x] Customer app: Cart header shows table name chip when in a table session
+- [x] Customer app: **Table selector chip in `MenuScreen` header** — visible when shop has tables; shows "Takeaway" or selected table name; tappable to reselect
+- [x] Customer app: `TablePickerBottomSheet` in `MenuScreen` — Takeaway option + scrollable table list; "Selected" badge on current choice; creates/joins Firestore session on pick
+- [x] `TablePickerViewModel.pickTable(table: Table)` — simplified signature; `tenantId` stored internally from `loadTables()` call
+- [x] Firestore rules — added `tables/{tableId}` (read: auth, write: owner) + `tableSessions/{sessionId}` (read/create/update: auth, delete: never) inside `tenants/{tenantId}`
+
+### Bug fixes & polish (2026-07-12)
+- [x] Business app: QR tab label was wrapping ("QR\nCod\ne") with 5 tabs — label shortened to "QR", icon changed to `Icons.Outlined.QrCode2`, tab columns use `Modifier.weight(1f)` + `padding(horizontal = 4.dp)`, pill padding reduced to `horizontal = 8.dp`
+- [x] Business app Tables tab crash — uncaught exception in child `launch {}` coroutines caused app crash; wrapped inner launch blocks in `TablesViewModel` and `OrdersViewModel` with try-catch so tables feature fails silently (non-fatal, opt-in)
+- [x] Business app Tables tab crash — Firestore PERMISSION_DENIED because rules didn't cover `tables`/`tableSessions`; fixed by deploying updated `firestore.rules`
+- [x] `TablePickerScreen.kt` call-site updated after `pickTable` signature change (`pickTable(table)` + `onProceed()` separately)
+- [x] `OrdersViewModel` — `openSessions` wipeout bug: `listenToOrders` was creating a fresh `OrdersUiState()` on every order change, resetting sessions to `emptyList()`; fixed with `.copy()`
+- [x] `TablesRepository.settleAndCloseSession` — new method replaces `closeSession`; batch-writes all non-cancelled orders to COMPLETED + paid (both tenant + user docs); `TablesViewModel` and `TableManagementScreen` updated
+- [x] Business app `OrdersScreen` — table orders now use kitchen-only actions (Accept/Reject/Mark Ready); no per-order payment/complete buttons; Settle & Close at session level handles payment
+- [x] Customer app `CartViewModel` — removed `tableContextHolder.clear()` after order placement; table context persists for multiple rounds at same table
+- [x] Customer app `OrderTrackingScreen` — payment section checks `tableName`: if blank → cash reminder; if set → "Added to {table}'s tab" info banner (AccentBlue); paid → green confirmed banner
+- [x] `TablePickerViewModel.loadTables()` — clears `TableContextHolder` when `tenantId` changes (fresh nav = new tenant); prevents stale table context when returning to a restaurant from dashboard
+- [x] Business app `TableManagementScreen` — spacing fixes: SectionLabel top padding reduced; header bottom padding reduced; "Close Session" button replaced with "Settle & Close • ₹X" green button
+- [x] Business app `ProductListScreen` — removed double bottom padding (Scaffold FAB padding + `contentPadding` were stacking)
+
+### UX improvements (2026-07-12)
+- [x] Business app `DashboardScreen` — `MiniOrderCard` shows table/takeaway chip (TableRestaurant icon + table name, or ShoppingBag + "Takeaway"); `onNavigateToOrders` callback now passes `orderId: String`
+- [x] Business app `HomeScreen` — `focusedOrderId` state threads dashboard tap → Orders tab; `DashboardScreen` sets orderId before switching to tab 1; `OrdersScreen` receives it
+- [x] Business app `OrdersScreen` — unified single list replacing Individual/Tables sub-tabs: table sessions first (orange section header + nested `TableOrderCard`s + Settle & Close), then takeaway active orders, then completed/cancelled; `focusedOrderId` auto-scrolls to the tapped order card and highlights it with blue accent background
+
+### Phase 8B — Hamburger Menu & Shop Settings ✅
+- [x] Business app: `ModalNavigationDrawer` in `HomeScreen` — hamburger icon in top bar; shop name + email in drawer header
+- [x] Drawer items: Edit Shop Details, Edit UPI, Credit Lines, Sign Out
+- [x] `ShopSetupScreen` — `isEditMode=true` nav arg; pre-populated from `TenantViewModel.tenantState`; "Save changes" button calls `updateShop()`; pops back on success
+- [x] `UpiSetupScreen` — `isEditMode=true` nav arg; pre-populated UPI ID; "Save" button; pops back on success
+- [x] `TenantViewModel.updateShop(name, address, phone)` — calls `TenantRepository.updateTenant`, updates local state
+- [x] `ui/credit/CreditScreen.kt` — placeholder shell with AccountBalance icon + "Coming in the next update" message
+- [x] `Routes.kt` — added `EDIT_SHOP`, `EDIT_UPI`, `CREDIT_LINES`
+- [x] `AppNavGraph.kt` — wired all three new routes; sign-out via `AuthViewModel.signOut()` clears full back stack
+
+### Phase 8C — Credit Lines ✅
+- [x] `shared/Models.kt` — added `CreditLine` data class, `CreditLineStatus` object (PENDING/ACTIVE/REJECTED), `PaymentMethod.CREDIT = "credit"`
+- [x] Customer `CreditRepository` — `requestCredit`, `listenToCreditLine`, `applyOrderToCredit`; batch-writes to both tenant + user paths
+- [x] Business `CreditRepository` — `listenToCreditLines`, `approveCredit` (with limit), `rejectCredit`, `markSettled` (resets balance)
+- [x] Business `CreditViewModel` — splits lines into pendingLines / activeLines; loads tenant via `TenantRepository.getTenantByOwnerId`
+- [x] Business `CreditScreen` — pending cards (Reject + Approve with limit dialog), active cards (balance progress bar, Settle button), empty state
+- [x] Customer `CartViewModel` — `loadCreditLine(tenantId)` listener, `requestCredit`, `setPaymentMethod`; credit orders set `paymentStatus=PAID` and call `applyOrderToCredit` after placement
+- [x] Customer `MenuScreen` header redesigned — chips moved to a dedicated `CardElevated` context bar row below shop name; table chip left, credit chip right; alpha 0.12→0.22, text 11sp→13sp SemiBold
+- [x] Customer `CartScreen` — Cash | Credit payment toggle shown when active credit line; credit option shows remaining balance or "Limit exceeded"; Place Order button turns green for credit
+- [x] `firestore.rules` — `creditLines/{customerId}` rules in tenant; `creditLines/{tenantId}` rules in user; order `create` rule allows `paymentStatus=paid` when `paymentMethod=credit`
+- [x] Table description field — `Table.description: String`; business `TableManagementScreen` add/edit dialogs include description; customer `TablePickerBottomSheet` shows description as subtitle
+
+### Work done (2026-07-13) ✅
+
+#### MenuScreen header redesign
+- [x] Header refactored from a flat `Row` to a `Column` with two sections: shop info row + context chips row
+- [x] Context chips row has `CardElevated` background, `padding(16.dp, 10.dp)` — chips no longer crammed inside the shop name column
+- [x] Table chip: `AccentBlue.copy(alpha=0.22f)` background, AccentBlue text 13sp SemiBold (was CardElevated bg, TextPrimary 12sp Medium — near-zero contrast)
+- [x] Credit chips: alpha 0.12→0.22, text 11sp→13sp SemiBold; "Apply for credit" uses `CardBackground` on `CardElevated` for real contrast
+- [x] Table chip left / credit chip right with `Spacer(weight(1f))`; credit chip left-aligned when no tables present
+
+#### Version bump
+- [x] Both apps bumped from `1.0 (versionCode 1)` → `2.0 (versionCode 2)`
+
+## Key Decisions Made (Phase 8)
+
+16. **Tables are opt-in via presence** — 0 tables in Firestore = feature invisible to customers; works for all business types (restaurants, medicine shops, retail). No toggle needed.
+17. **Table selection is in-menu, not post-scan** — Scanner always navigates straight to `MENU/{tenantId}`; no per-table QR codes. Customers choose Takeaway or a table from a chip in the `MenuScreen` header (visible only when the shop has ≥ 1 table). `TablePickerViewModel.loadTables()` is called inside `MenuScreen` via `LaunchedEffect`; `pickTable(table)` creates/joins a Firestore session and updates `TableContextHolder`. `TablePickerScreen.kt` still compiles but is not in the nav graph.
+18. **Hamburger menu** — `ModalNavigationDrawer` in business `HomeScreen`; edit screens reuse onboarding composables with an `isEditMode: Boolean` nav arg. No separate `SettingsRepository` needed — `TenantViewModel.updateShop()` writes directly via existing `TenantRepository.updateTenant()`.
+19. **Credit mirroring** — every credit mutation batch-writes to both `tenants/{tenantId}/creditLines/{uid}` and `users/{uid}/creditLines/{tenantId}` to keep both apps in sync.
+20. **No partial payments** — an order is fully cash or fully credit; no split payment.
+21. **QR format unchanged** — shop QR still encodes plain `tenantId`; per-table QR deferred.
+
+## Key Decisions Made (Phases 1–7)
 
 1. **Google Sign-In via Firebase Auth** (not direct Google) — needed for Firestore security rules (request.auth.uid)
 2. **Cash-only payments v1** — UPI deep link attempted but GPay blocks `upi://pay` intents with pre-filled amount from unregistered apps; Razorpay UPI-only (0% fee) planned for v2
@@ -241,6 +327,8 @@ For full-screen screens without bottom nav, add `statusBarsPadding()` to the top
 
 1. Read this file
 2. Check git log for latest commit
-3. **Only remaining work**: Play Store prep — requires creating a Google Play Developer account ($25 one-time fee at play.google.com/console), then a service account JSON for the API upload job in `release.yml`
-4. Cloud Functions already deployed to `countertap-dev` (asia-south1)
-5. CI/CD: `release.yml` triggers on every push to main, auto-publishes APK + AAB to GitHub Releases; Play Store upload job is stubbed out at the bottom — uncomment when account is ready
+3. **Active work**: Phase 8 fully complete (8A + 8B + 8C). PR open: `feature/credite-line` → `main`. Both apps at v2.0.
+4. **Firestore rules** must be deployed before credit lines work: `firebase deploy --only firestore:rules`
+5. **Pending post-Phase 8**: Play Store prep — Google Play Developer account ($25 one-time fee), then service account JSON for `release.yml` Play Store upload job
+6. Cloud Functions already deployed to `countertap-dev` (asia-south1)
+7. CI/CD: `release.yml` triggers on every push to main, auto-publishes APK + AAB to GitHub Releases
