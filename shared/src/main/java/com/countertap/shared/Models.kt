@@ -66,7 +66,28 @@ object PaymentStatus {
 object PaymentMethod {
     const val UPI = "upi"
     const val CASH = "cash"
+    const val CREDIT = "credit"
 }
+
+object CreditLineStatus {
+    const val PENDING = "pending"
+    const val ACTIVE = "active"
+    const val REJECTED = "rejected"
+}
+
+data class CreditLine(
+    @DocumentId val id: String = "",
+    val customerId: String = "",
+    val customerName: String = "",
+    val customerEmail: String = "",
+    val tenantId: String = "",
+    val shopName: String = "",
+    val limit: Double = 0.0,
+    val balance: Double = 0.0,
+    val status: String = CreditLineStatus.PENDING,
+    @ServerTimestamp val requestedAt: Date? = null,
+    val approvedAt: Date? = null
+)
 
 data class OrderItem(
     val productId: String = "",

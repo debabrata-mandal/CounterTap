@@ -58,17 +58,31 @@ service cloud.firestore {
 
         // Customer places an order:
         //   - customerId must equal their own UID
-        //   - must start as PENDING and unpaid
+        //   - must start as PENDING
+        //   - cash orders start unpaid; credit orders start paid
         allow create: if request.auth != null &&
           request.resource.data.customerId == request.auth.uid &&
-          request.resource.data.status    == 'PENDING'          &&
-          request.resource.data.paymentStatus == 'unpaid';
+          request.resource.data.status == 'PENDING' &&
+          (
+            request.resource.data.paymentStatus == 'unpaid' ||
+            (request.resource.data.paymentStatus == 'paid' &&
+             request.resource.data.paymentMethod == 'credit')
+          );
 
         // Only the shop owner may update orders (status + paymentStatus changes)
         allow update: if isOwner(tenantId);
 
         // No client-side deletes
         allow delete: if false;
+      }
+
+      // Credit lines (tenant side) — keyed by customerId
+      match /creditLines/{customerId} {
+        allow read:   if isOwner(tenantId) ||
+          (request.auth != null && request.auth.uid == customerId);
+        allow create: if request.auth != null && request.auth.uid == customerId;
+        allow update: if isOwner(tenantId);
+        allow delete: if isOwner(tenantId);
       }
     }
 
@@ -94,6 +108,17 @@ service cloud.firestore {
 
         // Only the user can delete their own summary
         allow delete: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Credit line mirror (user side) — keyed by tenantId
+      match /creditLines/{tenantId} {
+        allow read:   if request.auth != null && request.auth.uid == userId;
+        allow create: if request.auth != null && request.auth.uid == userId;
+        // Owner updates status/limit/balance; restrict to relevant fields
+        allow update: if request.auth != null &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'limit', 'balance', 'approvedAt']);
+        allow delete: if false;
       }
     }
 

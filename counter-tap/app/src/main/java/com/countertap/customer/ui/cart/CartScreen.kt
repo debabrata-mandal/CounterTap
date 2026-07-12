@@ -1,6 +1,7 @@
 package com.countertap.customer.ui.cart
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,10 +54,14 @@ import com.countertap.customer.ui.theme.CardBackground
 import com.countertap.customer.ui.theme.CardElevated
 import com.countertap.customer.ui.theme.DividerColor
 import com.countertap.customer.ui.theme.ErrorRed
+import com.countertap.customer.ui.theme.SuccessGreen
+import com.countertap.customer.ui.theme.TextHint
 import com.countertap.customer.ui.theme.TextPrimary
 import com.countertap.customer.ui.theme.TextSecondary
 import com.countertap.customer.viewmodel.CartViewModel
 import com.countertap.customer.viewmodel.OrderState
+import com.countertap.shared.CreditLineStatus
+import com.countertap.shared.PaymentMethod
 
 @Composable
 fun CartScreen(
@@ -68,7 +73,13 @@ fun CartScreen(
     val items by viewModel.items.collectAsState()
     val orderState by viewModel.orderState.collectAsState()
     val tableContext by viewModel.tableContext.collectAsState()
+    val creditLine by viewModel.creditLine.collectAsState()
+    val paymentMethod by viewModel.paymentMethod.collectAsState()
     var note by rememberSaveable { mutableStateOf("") }
+
+    val creditAvailable = creditLine?.status == CreditLineStatus.ACTIVE
+    val remainingCredit = ((creditLine?.limit ?: 0.0) - (creditLine?.balance ?: 0.0)).coerceAtLeast(0.0)
+    val canUseCredit = creditAvailable && remainingCredit >= viewModel.totalAmount
 
     LaunchedEffect(orderState) {
         if (orderState is OrderState.Success) {
@@ -253,6 +264,61 @@ fun CartScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            // Payment method toggle — only shown when customer has an active credit line
+            if (creditAvailable) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(CardElevated)
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    listOf(PaymentMethod.CASH to "💵  Cash", PaymentMethod.CREDIT to "💳  Credit").forEach { (method, label) ->
+                        val isSelected = paymentMethod == method
+                        val enabled = method == PaymentMethod.CASH || canUseCredit
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    when {
+                                        isSelected && method == PaymentMethod.CREDIT -> SuccessGreen.copy(alpha = 0.15f)
+                                        isSelected -> AccentBlue.copy(alpha = 0.15f)
+                                        else -> androidx.compose.ui.graphics.Color.Transparent
+                                    }
+                                )
+                                .clickable(enabled = enabled) { viewModel.setPaymentMethod(method) }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    label,
+                                    fontSize = 13.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = when {
+                                        !enabled -> TextHint
+                                        isSelected && method == PaymentMethod.CREDIT -> SuccessGreen
+                                        isSelected -> AccentBlue
+                                        else -> TextSecondary
+                                    }
+                                )
+                                if (method == PaymentMethod.CREDIT) {
+                                    Text(
+                                        if (canUseCredit) "₹${remainingCredit.toInt()} available"
+                                        else "Limit exceeded",
+                                        fontSize = 10.sp,
+                                        color = if (canUseCredit) SuccessGreen else TextHint
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+
             if (orderState is OrderState.Error) {
                 Text(
                     (orderState as OrderState.Error).message,
@@ -270,12 +336,14 @@ fun CartScreen(
                 Button(
                     onClick = { viewModel.placeOrder(tenantId, note) },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (paymentMethod == PaymentMethod.CREDIT) SuccessGreen else AccentBlue
+                    ),
                     shape = RoundedCornerShape(12.dp),
                     enabled = items.isNotEmpty()
                 ) {
                     Text(
-                        "Place Order",
+                        if (paymentMethod == PaymentMethod.CREDIT) "Place Order (Credit)" else "Place Order",
                         color = TextPrimary,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,

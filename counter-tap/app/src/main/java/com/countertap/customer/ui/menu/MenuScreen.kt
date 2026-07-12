@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Lock
@@ -68,11 +69,13 @@ import com.countertap.customer.ui.theme.CardElevated
 import com.countertap.customer.ui.theme.SurfaceColor
 import com.countertap.customer.ui.theme.TextPrimary
 import com.countertap.customer.ui.theme.TextSecondary
+import com.countertap.customer.ui.theme.SuccessGreen
 import com.countertap.customer.ui.theme.WarningOrange
 import com.countertap.customer.viewmodel.CartViewModel
 import com.countertap.customer.viewmodel.MenuViewModel
 import com.countertap.customer.viewmodel.TablePickerState
 import com.countertap.customer.viewmodel.TablePickerViewModel
+import com.countertap.shared.CreditLineStatus
 import com.countertap.shared.OptionGroup
 import com.countertap.shared.Product
 import com.countertap.shared.SelectedOption
@@ -103,9 +106,12 @@ fun MenuScreen(
     val tableSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
+    val creditLine by cartViewModel.creditLine.collectAsState()
+
     LaunchedEffect(tenantId) {
         menuViewModel.loadShop(tenantId)
         tablePickerViewModel.loadTables(tenantId)
+        cartViewModel.loadCreditLine(tenantId)
     }
 
     if (showTableSheet) {
@@ -144,69 +150,131 @@ fun MenuScreen(
         Column(modifier = Modifier.fillMaxSize()) {
 
             // Header
-            Row(
+            val hasTables = pickerState is TablePickerState.Ready &&
+                (pickerState as TablePickerState.Ready).tables.isNotEmpty()
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(CardBackground)
                     .statusBarsPadding()
-                    .padding(start = 20.dp, end = 8.dp, top = 14.dp, bottom = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = uiState.shop?.name ?: "Loading…",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    if (uiState.shop?.address?.isNotBlank() == true) {
-                        Spacer(modifier = Modifier.height(2.dp))
+                // Shop name + QR scanner button
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 20.dp, end = 4.dp, top = 16.dp, bottom = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = uiState.shop!!.address,
-                            fontSize = 13.sp,
-                            color = TextSecondary
+                            text = uiState.shop?.name ?: "Loading…",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        if (uiState.shop?.address?.isNotBlank() == true) {
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = uiState.shop!!.address,
+                                fontSize = 13.sp,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                    IconButton(onClick = onChangeRestaurant) {
+                        Icon(
+                            Icons.Default.QrCodeScanner,
+                            contentDescription = "Change Restaurant",
+                            tint = AccentBlue
                         )
                     }
-                    val hasTables = pickerState is TablePickerState.Ready &&
-                        (pickerState as TablePickerState.Ready).tables.isNotEmpty()
+                }
+
+                // Context chips row — table selector (left) and credit status (right)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(CardElevated)
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     if (hasTables || tableContext != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
                         Row(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(CardElevated)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(AccentBlue.copy(alpha = 0.22f))
                                 .clickable { showTableSheet = true }
-                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Icon(
                                 Icons.Default.TableRestaurant,
                                 contentDescription = null,
                                 tint = AccentBlue,
-                                modifier = Modifier.size(14.dp)
+                                modifier = Modifier.size(15.dp)
                             )
                             Text(
                                 text = tableContext?.tableName?.ifBlank { "Takeaway" } ?: "Takeaway",
-                                fontSize = 12.sp,
-                                color = TextPrimary,
-                                fontWeight = FontWeight.Medium
+                                fontSize = 13.sp,
+                                color = AccentBlue,
+                                fontWeight = FontWeight.SemiBold
                             )
                             Icon(
                                 Icons.Default.ArrowDropDown,
                                 contentDescription = null,
-                                tint = TextSecondary,
-                                modifier = Modifier.size(16.dp)
+                                tint = AccentBlue,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
+                        Spacer(modifier = Modifier.weight(1f))
                     }
-                }
-                IconButton(onClick = onChangeRestaurant) {
-                    Icon(
-                        Icons.Default.QrCodeScanner,
-                        contentDescription = "Change Restaurant",
-                        tint = AccentBlue
-                    )
+
+                    when {
+                        creditLine == null -> {
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(CardBackground)
+                                    .clickable {
+                                        cartViewModel.requestCredit(tenantId, uiState.shop?.name ?: "")
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(Icons.Default.AccountBalance, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(14.dp))
+                                Text("Apply for credit", fontSize = 13.sp, color = TextSecondary)
+                            }
+                        }
+                        creditLine!!.status == CreditLineStatus.PENDING -> {
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(WarningOrange.copy(alpha = 0.22f))
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(Icons.Default.AccountBalance, contentDescription = null, tint = WarningOrange, modifier = Modifier.size(14.dp))
+                                Text("Credit: Pending", fontSize = 13.sp, color = WarningOrange, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                        creditLine!!.status == CreditLineStatus.ACTIVE -> {
+                            val remaining = (creditLine!!.limit - creditLine!!.balance).coerceAtLeast(0.0)
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(SuccessGreen.copy(alpha = 0.22f))
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(Icons.Default.AccountBalance, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(14.dp))
+                                Text("₹${remaining.toInt()} credit", fontSize = 13.sp, color = SuccessGreen, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
                 }
             }
 
