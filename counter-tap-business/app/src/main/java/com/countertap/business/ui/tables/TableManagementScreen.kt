@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.TableRestaurant
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -125,8 +126,9 @@ fun TableManagementScreen(viewModel: TablesViewModel = hiltViewModel()) {
                     items(uiState.tables, key = { it.id }) { table ->
                         val hasSession = uiState.openSessions.any { it.tableId == table.id }
                         TableCard(
-                            name = table.name,
+                            table = table,
                             occupied = hasSession,
+                            onEdit = { viewModel.showEditDialog(table) },
                             onDelete = { viewModel.deleteTable(table.id) }
                         )
                     }
@@ -139,8 +141,16 @@ fun TableManagementScreen(viewModel: TablesViewModel = hiltViewModel()) {
 
     if (uiState.showAddDialog) {
         AddTableDialog(
-            onConfirm = { name -> viewModel.addTable(name) },
+            onConfirm = { name, desc -> viewModel.addTable(name, desc) },
             onDismiss = { viewModel.hideAddDialog() }
+        )
+    }
+
+    uiState.editingTable?.let { table ->
+        EditTableDialog(
+            table = table,
+            onConfirm = { name, desc -> viewModel.updateTable(table.id, name, desc) },
+            onDismiss = { viewModel.hideEditDialog() }
         )
     }
 }
@@ -164,7 +174,12 @@ private fun SectionLabel(text: String, color: androidx.compose.ui.graphics.Color
 }
 
 @Composable
-private fun TableCard(name: String, occupied: Boolean, onDelete: () -> Unit) {
+private fun TableCard(
+    table: com.countertap.shared.Table,
+    occupied: Boolean,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -194,15 +209,29 @@ private fun TableCard(name: String, occupied: Boolean, onDelete: () -> Unit) {
             )
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(name, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                Text(
-                    if (occupied) "Occupied" else "Available",
-                    fontSize = 12.sp,
-                    color = if (occupied) WarningOrange else SuccessGreen
-                )
+                Text(table.name, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                if (table.description.isNotBlank()) {
+                    Text(table.description, fontSize = 12.sp, color = TextSecondary, maxLines = 1)
+                } else {
+                    Text(
+                        if (occupied) "Occupied" else "Available",
+                        fontSize = 12.sp,
+                        color = if (occupied) WarningOrange else SuccessGreen
+                    )
+                }
+                if (table.description.isNotBlank()) {
+                    Text(
+                        if (occupied) "Occupied" else "Available",
+                        fontSize = 11.sp,
+                        color = if (occupied) WarningOrange else SuccessGreen
+                    )
+                }
+            }
+            IconButton(onClick = onEdit) {
+                Icon(Icons.Default.Edit, contentDescription = "Edit", tint = AccentBlue, modifier = Modifier.size(18.dp))
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = ErrorRed, modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = ErrorRed, modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -274,32 +303,94 @@ private fun EmptyTablesState() {
 }
 
 @Composable
-private fun AddTableDialog(onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
+private fun AddTableDialog(onConfirm: (String, String) -> Unit, onDismiss: () -> Unit) {
     var name by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = AccentBlue,
+        unfocusedBorderColor = DividerColor,
+        focusedTextColor = TextPrimary,
+        unfocusedTextColor = TextPrimary
+    )
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = CardBackground,
         title = { Text("Add Table", color = TextPrimary, fontWeight = FontWeight.Bold) },
         text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Table name (e.g. Table 1)", color = TextSecondary) },
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentBlue,
-                    unfocusedBorderColor = DividerColor,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Table name (e.g. Table 1)", color = TextSecondary) },
+                    singleLine = true,
+                    colors = fieldColors
                 )
-            )
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Description (optional)", color = TextSecondary) },
+                    placeholder = { Text("e.g. Window seat, 4 persons", color = TextHint) },
+                    singleLine = true,
+                    colors = fieldColors
+                )
+            }
         },
         confirmButton = {
             Button(
-                onClick = { if (name.isNotBlank()) onConfirm(name) },
+                onClick = { if (name.isNotBlank()) onConfirm(name, description) },
                 colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
                 enabled = name.isNotBlank()
             ) { Text("Add", color = TextPrimary) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel", color = TextSecondary) }
+        }
+    )
+}
+
+@Composable
+private fun EditTableDialog(
+    table: com.countertap.shared.Table,
+    onConfirm: (String, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf(table.name) }
+    var description by remember { mutableStateOf(table.description) }
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = AccentBlue,
+        unfocusedBorderColor = DividerColor,
+        focusedTextColor = TextPrimary,
+        unfocusedTextColor = TextPrimary
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = CardBackground,
+        title = { Text("Edit Table", color = TextPrimary, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Table name", color = TextSecondary) },
+                    singleLine = true,
+                    colors = fieldColors
+                )
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Description (optional)", color = TextSecondary) },
+                    placeholder = { Text("e.g. Window seat, 4 persons", color = TextHint) },
+                    singleLine = true,
+                    colors = fieldColors
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { if (name.isNotBlank()) onConfirm(name, description) },
+                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
+                enabled = name.isNotBlank()
+            ) { Text("Save", color = TextPrimary) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel", color = TextSecondary) }

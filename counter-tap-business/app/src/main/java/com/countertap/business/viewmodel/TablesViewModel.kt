@@ -19,6 +19,7 @@ data class TablesUiState(
     val tables: List<Table> = emptyList(),
     val openSessions: List<TableSession> = emptyList(),
     val showAddDialog: Boolean = false,
+    val editingTable: Table? = null,
     val error: String? = null
 )
 
@@ -76,14 +77,29 @@ class TablesViewModel @Inject constructor(
 
     fun showAddDialog() { _uiState.value = _uiState.value.copy(showAddDialog = true) }
     fun hideAddDialog() { _uiState.value = _uiState.value.copy(showAddDialog = false) }
+    fun showEditDialog(table: Table) { _uiState.value = _uiState.value.copy(editingTable = table) }
+    fun hideEditDialog() { _uiState.value = _uiState.value.copy(editingTable = null) }
 
-    fun addTable(name: String) {
+    fun addTable(name: String, description: String = "") {
         val tid = tenantId ?: return
         if (name.isBlank()) return
         viewModelScope.launch {
             try {
-                tablesRepository.addTable(tid, name.trim())
+                tablesRepository.addTable(tid, name.trim(), description.trim())
                 hideAddDialog()
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message)
+            }
+        }
+    }
+
+    fun updateTable(tableId: String, name: String, description: String) {
+        val tid = tenantId ?: return
+        if (name.isBlank()) return
+        viewModelScope.launch {
+            try {
+                tablesRepository.updateTable(tid, tableId, name.trim(), description.trim())
+                hideEditDialog()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)
             }

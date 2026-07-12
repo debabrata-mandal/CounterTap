@@ -88,6 +88,7 @@ object OrderStatus {
 data class Table(
     @DocumentId val id: String = "",
     val name: String = "",
+    val description: String = "",
     @ServerTimestamp val createdAt: Date? = null
 )
 

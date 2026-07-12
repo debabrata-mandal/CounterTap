@@ -634,13 +634,21 @@ private fun TablePickerBottomSheet(
                             tint = if (isSelected) AccentBlue else TextSecondary,
                             modifier = Modifier.size(22.dp)
                         )
-                        Text(
-                            table.name,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (isSelected) AccentBlue else TextPrimary,
-                            modifier = Modifier.weight(1f)
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                table.name,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isSelected) AccentBlue else TextPrimary
+                            )
+                            if (table.description.isNotBlank()) {
+                                Text(
+                                    table.description,
+                                    fontSize = 12.sp,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
                         if (isSelected) {
                             Box(
                                 modifier = Modifier

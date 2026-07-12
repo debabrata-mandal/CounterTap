@@ -33,10 +33,15 @@ class TablesRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    suspend fun addTable(tenantId: String, name: String): String {
+    suspend fun addTable(tenantId: String, name: String, description: String = ""): String {
         val ref = tablesRef(tenantId).document()
-        ref.set(Table(id = ref.id, name = name)).await()
+        ref.set(Table(id = ref.id, name = name, description = description)).await()
         return ref.id
+    }
+
+    suspend fun updateTable(tenantId: String, tableId: String, name: String, description: String) {
+        tablesRef(tenantId).document(tableId)
+            .update(mapOf("name" to name, "description" to description)).await()
     }
 
     suspend fun deleteTable(tenantId: String, tableId: String) {
