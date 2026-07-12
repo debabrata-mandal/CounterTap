@@ -86,7 +86,6 @@ fun ProductListScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(BackgroundDark)
-                    .statusBarsPadding()
             ) {
                 Row(
                     modifier = Modifier

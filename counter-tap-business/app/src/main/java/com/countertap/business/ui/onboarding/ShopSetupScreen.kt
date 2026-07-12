@@ -8,9 +8,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -28,35 +33,61 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.countertap.business.viewmodel.SaveState
+import com.countertap.business.viewmodel.TenantState
 import com.countertap.business.viewmodel.TenantViewModel
 
 @Composable
 fun ShopSetupScreen(
     onSetupComplete: () -> Unit,
+    isEditMode: Boolean = false,
+    onBack: () -> Unit = {},
     viewModel: TenantViewModel = hiltViewModel()
 ) {
     val saveState by viewModel.saveState.collectAsState()
+    val tenantState by viewModel.tenantState.collectAsState()
 
-    var name by rememberSaveable { mutableStateOf("") }
-    var address by rememberSaveable { mutableStateOf("") }
-    var phone by rememberSaveable { mutableStateOf("") }
+    val existingShop = (tenantState as? TenantState.Ready)?.shop
+
+    var name by rememberSaveable { mutableStateOf(if (isEditMode) existingShop?.name ?: "" else "") }
+    var address by rememberSaveable { mutableStateOf(if (isEditMode) existingShop?.address ?: "" else "") }
+    var phone by rememberSaveable { mutableStateOf(if (isEditMode) existingShop?.phone ?: "" else "") }
+
+    // Pre-populate once the tenant data loads (in case it wasn't ready at first composition)
+    LaunchedEffect(existingShop) {
+        if (isEditMode && existingShop != null) {
+            if (name.isEmpty()) name = existingShop.name
+            if (address.isEmpty()) address = existingShop.address
+            if (phone.isEmpty()) phone = existingShop.phone
+        }
+    }
 
     LaunchedEffect(saveState) {
         if (saveState is SaveState.Success) {
             viewModel.resetSaveState()
-            onSetupComplete()
+            if (isEditMode) onBack() else onSetupComplete()
         }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = if (isEditMode) Arrangement.Top else Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        if (isEditMode) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.align(Alignment.Start)
+            ) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         Text(
-            text = "Set up your shop",
+            text = if (isEditMode) "Edit shop details" else "Set up your shop",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
@@ -107,11 +138,14 @@ fun ShopSetupScreen(
             CircularProgressIndicator(modifier = Modifier.size(48.dp))
         } else {
             Button(
-                onClick = { viewModel.createShop(name.trim(), address.trim(), phone.trim()) },
+                onClick = {
+                    if (isEditMode) viewModel.updateShop(name.trim(), address.trim(), phone.trim())
+                    else viewModel.createShop(name.trim(), address.trim(), phone.trim())
+                },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = name.isNotBlank() && address.isNotBlank() && phone.isNotBlank()
             ) {
-                Text("Continue")
+                Text(if (isEditMode) "Save changes" else "Continue")
             }
 
             if (saveState is SaveState.Error) {

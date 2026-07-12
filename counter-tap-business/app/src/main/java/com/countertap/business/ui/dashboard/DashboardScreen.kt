@@ -77,7 +77,6 @@ fun DashboardScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundDark)
-            .statusBarsPadding()
     ) {
         when {
             state.isLoading -> {

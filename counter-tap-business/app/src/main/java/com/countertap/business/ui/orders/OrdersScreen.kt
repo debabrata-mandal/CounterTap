@@ -60,7 +60,6 @@ fun OrdersScreen(viewModel: OrdersViewModel = hiltViewModel()) {
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundDark)
-            .statusBarsPadding()
     ) {
         Text(
             "Orders",

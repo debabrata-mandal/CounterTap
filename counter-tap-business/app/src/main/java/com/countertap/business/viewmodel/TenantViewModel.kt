@@ -64,6 +64,20 @@ class TenantViewModel @Inject constructor(
         }
     }
 
+    fun updateShop(name: String, address: String, phone: String) {
+        val shop = (_tenantState.value as? TenantState.Ready)?.shop ?: return
+        viewModelScope.launch {
+            _saveState.value = SaveState.Saving
+            try {
+                repository.updateTenant(shop.id, mapOf("name" to name, "address" to address, "phone" to phone))
+                _tenantState.value = TenantState.Ready(shop.copy(name = name, address = address, phone = phone))
+                _saveState.value = SaveState.Success
+            } catch (e: Exception) {
+                _saveState.value = SaveState.Error(e.message ?: "Failed to update shop")
+            }
+        }
+    }
+
     fun saveUpiId(upiId: String) {
         val shop = (_tenantState.value as? TenantState.Ready)?.shop ?: return
         viewModelScope.launch {

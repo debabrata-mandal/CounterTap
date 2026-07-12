@@ -91,7 +91,6 @@ fun QrCodeScreen(
             .fillMaxSize()
             .background(BackgroundDark)
             .verticalScroll(rememberScrollState())
-            .statusBarsPadding()
             .padding(horizontal = 20.dp)
             .padding(top = 20.dp, bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

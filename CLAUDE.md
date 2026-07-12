@@ -1,7 +1,7 @@
 # CounterTap — Claude Context File
 
 This file helps Claude quickly understand the project state in any new session.
-Read this + PLAN.md before making any changes.
+Read this file before making any changes.
 
 ## What This Project Is
 
@@ -46,19 +46,27 @@ Local: C:\Github\default\CounterTap
 
 ```
 tenants/{tenantId}/
-  products/{productId}     — Product data (available:bool, categoryId:string, optionGroups:[])
-  orders/{orderId}         — Order data (status, paymentStatus, note, items[], customerId); each item has selectedOptions:[]
-  categories/{categoryId}  — Menu categories (name, order:int)
+  products/{productId}       — Product data (available:bool, categoryId:string, optionGroups:[])
+  orders/{orderId}           — Order data (status, paymentStatus, paymentMethod, note, items[], customerId, tableSessionId?); each item has selectedOptions:[]
+  categories/{categoryId}    — Menu categories (name, order:int)
+  tables/{tableId}           — (Phase 8A) Table definitions: name, createdAt
+  tableSessions/{sessionId}  — (Phase 8A) Active/closed sessions: tableId, tableName, status, openedAt, closedAt?, orderIds[], customerIds[], totalAmount, paymentStatus, paidVia?
+  creditLines/{customerId}   — (Phase 8C) Credit line per customer: customerId, customerName, customerEmail, limit, balance, status, requestedAt, approvedAt?
 users/{userId}/
-  fcmToken                 — FCM device token (saved by business app on startup)
-  orders/{orderId}         — UserOrderSummary: tenantId, shopName, status, totalAmount, items, note, createdAt
+  fcmToken                   — FCM device token (saved by business app on startup)
+  orders/{orderId}           — UserOrderSummary: tenantId, shopName, status, totalAmount, items, note, createdAt
+  creditLines/{tenantId}     — (Phase 8C) Mirror of tenant credit line for customer app: tenantId, shopName, limit, balance, status
 ```
 
 Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 
 ## Current Phase
 
-**Phase 7 — Product Options / Variants (COMPLETE)**
+**Phase 8 — Tables, Hamburger Menu & Credit Lines (IN PROGRESS)**
+See `PHASE8_PLAN.md` for full design. Three sub-phases:
+- **8A** — Tables (opt-in collective billing; invisible to shops with no tables)
+- **8B** — Hamburger menu in business app: edit shop details, edit UPI, access credit lines
+- **8C** — Credit lines: customer requests credit, owner approves with limit, cart charges to credit
 
 ## Completed Work
 
@@ -189,13 +197,53 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 #### UI improvements
 - [x] Business app `CategoryScreen` — redesigned from plain list to 2-column grid of square tiles; each tile has emoji illustration (auto-detected from 30+ keyword rules: tea→☕, biryani→🍚, momos→🥟, etc.) on a coloured gradient background, category name + item count in a darker strip below; delete button as translucent overlay in top-right corner; empty state with 🗂️ illustration; emoji are standard Unicode rendered as large `Text` — no assets or internet required
 
-### Remaining
+### Remaining (pre-Phase 8)
 - [x] Firestore security rules — `firestore.rules` at repo root; deploy with `firebase deploy --only firestore:rules`
 - [x] Dashboard design improvements (both apps)
 - [x] App icons + splash screen — storefront (business), tea cup (customer); `androidx.core:core-splashscreen` 700ms hold
 - [ ] Play Store prep — needs Google Play Developer account ($25 one-time fee)
 
-## Key Decisions Made
+### Phase 8A — Tables (opt-in collective billing) 🔲
+- [ ] `shared/Models.kt` — add `Table`, `TableSession` data classes; add `tableSessionId: String?` to `Order`
+- [ ] `TablesRepository` — CRUD tables, create/close sessions, addOrderToSession (batch)
+- [ ] Business app: `TableManagementScreen` — list/add/delete tables; empty state explains opt-in nature
+- [ ] Business app: Orders tab gets Individual / Tables sub-tabs; table session cards with close + pay actions
+- [ ] Business app bottom nav: add Tables tab (Dashboard | Orders | Menu | Tables | QR)
+- [ ] Customer app: `TablePickerScreen` — shown after QR scan only if tenant has ≥ 1 table; Takeaway always available
+- [ ] Customer app: `ScannerViewModel` fetches tables count post-scan; routes to picker or menu directly
+- [ ] Customer app: `CartViewModel.placeOrder` passes `tableSessionId`; calls `addOrderToSession` after order created
+- [ ] Customer app: Menu + Cart headers show table name when in a session
+
+### Phase 8B — Hamburger Menu & Shop Settings ✅
+- [x] Business app: `ModalNavigationDrawer` in `HomeScreen` — hamburger icon in top bar; shop name + email in drawer header
+- [x] Drawer items: Edit Shop Details, Edit UPI, Credit Lines, Sign Out
+- [x] `ShopSetupScreen` — `isEditMode=true` nav arg; pre-populated from `TenantViewModel.tenantState`; "Save changes" button calls `updateShop()`; pops back on success
+- [x] `UpiSetupScreen` — `isEditMode=true` nav arg; pre-populated UPI ID; "Save" button; pops back on success
+- [x] `TenantViewModel.updateShop(name, address, phone)` — calls `TenantRepository.updateTenant`, updates local state
+- [x] `ui/credit/CreditScreen.kt` — placeholder shell with AccountBalance icon + "Coming in the next update" message
+- [x] `Routes.kt` — added `EDIT_SHOP`, `EDIT_UPI`, `CREDIT_LINES`
+- [x] `AppNavGraph.kt` — wired all three new routes; sign-out via `AuthViewModel.signOut()` clears full back stack
+
+### Phase 8C — Credit Lines 🔲
+- [ ] `shared/Models.kt` — add `CreditLine` data class; `PaymentMethod.CREDIT = "credit"` constant
+- [ ] `CreditRepository` (customer) — `requestCredit`, `listenToCreditLine`, `applyOrderToCredit`
+- [ ] Customer app: "Request Credit" button in menu header (hidden if line exists)
+- [ ] Customer app: credit status chip in menu header (pending / active with balance)
+- [ ] Customer app: Cart payment toggle — Cash at counter | Charge to Credit (shown only if active line)
+- [ ] `CreditRepository` (business) — `listenToCreditLines`, `approveCredit`, `rejectCredit`, `markSettled`
+- [ ] Business app: `CreditScreen` fully wired — pending requests (approve/reject), active lines (balance/limit, settle)
+- [ ] Business app: table close payment dialog — Cash | Credit (credit dropdown shows eligible customers)
+
+## Key Decisions Made (Phase 8)
+
+16. **Tables are opt-in via presence** — 0 tables in Firestore = feature invisible to customers; works for all business types (restaurants, medicine shops, retail). No toggle needed.
+17. **Table picker gating** — `ScannerViewModel` fetches `tables` count after QR decode; navigates to `TablePickerScreen` only if count ≥ 1, else straight to `MENU/{tenantId}`.
+18. **Hamburger menu** — `ModalNavigationDrawer` in business `HomeScreen`; edit screens reuse onboarding composables with an `isEditMode: Boolean` nav arg. No separate `SettingsRepository` needed — `TenantViewModel.updateShop()` writes directly via existing `TenantRepository.updateTenant()`.
+19. **Credit mirroring** — every credit mutation batch-writes to both `tenants/{tenantId}/creditLines/{uid}` and `users/{uid}/creditLines/{tenantId}` to keep both apps in sync.
+20. **No partial payments** — an order is fully cash or fully credit; no split payment.
+21. **QR format unchanged** — shop QR still encodes plain `tenantId`; per-table QR deferred.
+
+## Key Decisions Made (Phases 1–7)
 
 1. **Google Sign-In via Firebase Auth** (not direct Google) — needed for Firestore security rules (request.auth.uid)
 2. **Cash-only payments v1** — UPI deep link attempted but GPay blocks `upi://pay` intents with pre-filled amount from unregistered apps; Razorpay UPI-only (0% fee) planned for v2
@@ -241,6 +289,7 @@ For full-screen screens without bottom nav, add `statusBarsPadding()` to the top
 
 1. Read this file
 2. Check git log for latest commit
-3. **Only remaining work**: Play Store prep — requires creating a Google Play Developer account ($25 one-time fee at play.google.com/console), then a service account JSON for the API upload job in `release.yml`
-4. Cloud Functions already deployed to `countertap-dev` (asia-south1)
-5. CI/CD: `release.yml` triggers on every push to main, auto-publishes APK + AAB to GitHub Releases; Play Store upload job is stubbed out at the bottom — uncomment when account is ready
+3. **Active work**: Phase 8A (Tables) is next — Phase 8B (Hamburger Menu) is complete; Phase 8C (Credit Lines) shell is in place
+4. **Pending post-Phase 8**: Play Store prep — Google Play Developer account ($25 one-time fee), then service account JSON for `release.yml` Play Store upload job
+5. Cloud Functions already deployed to `countertap-dev` (asia-south1)
+6. CI/CD: `release.yml` triggers on every push to main, auto-publishes APK + AAB to GitHub Releases
