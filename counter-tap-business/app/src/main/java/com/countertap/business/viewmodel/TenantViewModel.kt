@@ -78,6 +78,17 @@ class TenantViewModel @Inject constructor(
         }
     }
 
+    fun toggleShopActive() {
+        val shop = (_tenantState.value as? TenantState.Ready)?.shop ?: return
+        val newActive = !shop.active
+        viewModelScope.launch {
+            try {
+                repository.updateTenant(shop.id, mapOf("active" to newActive))
+                _tenantState.value = TenantState.Ready(shop.copy(active = newActive))
+            } catch (_: Exception) {}
+        }
+    }
+
     fun resetSaveState() {
         _saveState.value = SaveState.Idle
     }

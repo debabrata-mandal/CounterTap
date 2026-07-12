@@ -27,6 +27,8 @@ import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.automirrored.filled.TrendingFlat
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -43,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.countertap.business.ui.theme.AccentBlue
+import com.countertap.business.ui.theme.SurfaceColor
 import com.countertap.business.ui.theme.BackgroundDark
 import com.countertap.business.ui.theme.CardBackground
 import com.countertap.business.ui.theme.ErrorRed
@@ -52,6 +55,8 @@ import com.countertap.business.ui.theme.TextPrimary
 import com.countertap.business.ui.theme.TextSecondary
 import com.countertap.business.ui.theme.WarningOrange
 import com.countertap.business.viewmodel.DashboardViewModel
+import com.countertap.business.viewmodel.TenantState
+import com.countertap.business.viewmodel.TenantViewModel
 import com.countertap.shared.Order
 import com.countertap.shared.OrderStatus
 import java.text.SimpleDateFormat
@@ -61,9 +66,12 @@ import java.util.Locale
 @Composable
 fun DashboardScreen(
     onNavigateToOrders: () -> Unit = {},
-    viewModel: DashboardViewModel = hiltViewModel()
+    viewModel: DashboardViewModel = hiltViewModel(),
+    tenantViewModel: TenantViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val tenantState by tenantViewModel.tenantState.collectAsState()
+    val shop = (tenantState as? TenantState.Ready)?.shop
 
     Box(
         modifier = Modifier
@@ -129,6 +137,64 @@ fun DashboardScreen(
                                     tint = AccentBlue,
                                     modifier = Modifier.size(20.dp)
                                 )
+                            }
+                        }
+                    }
+
+                    // Shop open/closed toggle
+                    if (shop != null) {
+                        item {
+                            val isOpen = shop.active
+                            val accentColor = if (isOpen) SuccessGreen else WarningOrange
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp, vertical = 4.dp)
+                                    .height(IntrinsicSize.Min)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(SurfaceColor),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(4.dp)
+                                        .fillMaxHeight()
+                                        .background(accentColor)
+                                )
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(
+                                            "SHOP STATUS",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextHint,
+                                            letterSpacing = 1.sp
+                                        )
+                                        Spacer(Modifier.height(2.dp))
+                                        Text(
+                                            if (isOpen) "Open for orders" else "Closed temporarily",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = accentColor
+                                        )
+                                    }
+                                    Switch(
+                                        checked = isOpen,
+                                        onCheckedChange = { tenantViewModel.toggleShopActive() },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = SuccessGreen,
+                                            checkedTrackColor = SuccessGreen.copy(alpha = 0.30f),
+                                            uncheckedThumbColor = WarningOrange,
+                                            uncheckedTrackColor = WarningOrange.copy(alpha = 0.20f)
+                                        )
+                                    )
+                                }
                             }
                         }
                     }

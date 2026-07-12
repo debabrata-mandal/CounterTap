@@ -10,6 +10,7 @@ import com.countertap.shared.OrderItem
 import com.countertap.shared.OrderStatus
 import com.countertap.shared.PaymentMethod
 import com.countertap.shared.Product
+import com.countertap.shared.SelectedOption
 
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,7 +20,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class CartItem(val product: Product, val quantity: Int)
+data class CartItem(
+    val product: Product,
+    val quantity: Int,
+    val selectedOptions: List<SelectedOption> = emptyList(),
+    val unitPrice: Double = product.price
+)
 
 sealed class OrderState {
     object Idle : OrderState()
@@ -43,22 +49,27 @@ class CartViewModel @Inject constructor(
     val orderState: StateFlow<OrderState> = _orderState.asStateFlow()
 
     val totalAmount: Double
-        get() = _items.value.sumOf { it.product.price * it.quantity }
+        get() = _items.value.sumOf { it.unitPrice * it.quantity }
 
     val totalCount: Int
         get() = _items.value.sumOf { it.quantity }
 
-    fun add(product: Product) {
+    fun add(product: Product) = addConfigured(product, emptyList())
+
+    fun remove(product: Product) = removeConfigured(product, emptyList())
+
+    fun addConfigured(product: Product, selectedOptions: List<SelectedOption>) {
+        val unitPrice = product.price + selectedOptions.sumOf { it.priceAddon }
         val current = _items.value.toMutableList()
-        val idx = current.indexOfFirst { it.product.id == product.id }
+        val idx = current.indexOfFirst { it.product.id == product.id && it.selectedOptions == selectedOptions }
         if (idx >= 0) current[idx] = current[idx].copy(quantity = current[idx].quantity + 1)
-        else current.add(CartItem(product, 1))
+        else current.add(CartItem(product, 1, selectedOptions, unitPrice))
         _items.value = current
     }
 
-    fun remove(product: Product) {
+    fun removeConfigured(product: Product, selectedOptions: List<SelectedOption>) {
         val current = _items.value.toMutableList()
-        val idx = current.indexOfFirst { it.product.id == product.id }
+        val idx = current.indexOfFirst { it.product.id == product.id && it.selectedOptions == selectedOptions }
         if (idx < 0) return
         if (current[idx].quantity > 1) current[idx] = current[idx].copy(quantity = current[idx].quantity - 1)
         else current.removeAt(idx)
@@ -66,7 +77,10 @@ class CartViewModel @Inject constructor(
     }
 
     fun quantityOf(productId: String): Int =
-        _items.value.find { it.product.id == productId }?.quantity ?: 0
+        _items.value.filter { it.product.id == productId }.sumOf { it.quantity }
+
+    fun quantityOfConfigured(productId: String, selectedOptions: List<SelectedOption>): Int =
+        _items.value.find { it.product.id == productId && it.selectedOptions == selectedOptions }?.quantity ?: 0
 
     fun placeOrder(tenantId: String, note: String = "") {
         val user = auth.currentUser ?: return
@@ -83,7 +97,8 @@ class CartViewModel @Inject constructor(
                             productId = it.product.id,
                             productName = it.product.name,
                             quantity = it.quantity,
-                            price = it.product.price
+                            price = it.unitPrice,
+                            selectedOptions = it.selectedOptions
                         )
                     },
                     totalAmount = totalAmount,

@@ -3,6 +3,7 @@ package com.countertap.business.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -64,8 +65,9 @@ fun AppNavGraph(startDestination: String) {
             )
         }
 
-        composable(Routes.ADD_PRODUCT) {
-            val menuViewModel: MenuViewModel = hiltViewModel()
+        composable(Routes.ADD_PRODUCT) { currentEntry ->
+            val homeEntry = remember(currentEntry) { navController.getBackStackEntry(Routes.HOME) }
+            val menuViewModel: MenuViewModel = hiltViewModel(homeEntry)
             AddEditProductScreen(
                 existingProduct = null,
                 onDone = { navController.popBackStack() },
@@ -75,7 +77,8 @@ fun AppNavGraph(startDestination: String) {
 
         composable(Routes.EDIT_PRODUCT) { backStackEntry ->
             val productId = backStackEntry.arguments?.getString("productId") ?: ""
-            val menuViewModel: MenuViewModel = hiltViewModel()
+            val homeEntry = remember(backStackEntry) { navController.getBackStackEntry(Routes.HOME) }
+            val menuViewModel: MenuViewModel = hiltViewModel(homeEntry)
             val uiState by menuViewModel.uiState.collectAsState()
             val product = uiState.products.find { it.id == productId }
             AddEditProductScreen(
@@ -85,8 +88,9 @@ fun AppNavGraph(startDestination: String) {
             )
         }
 
-        composable(Routes.CATEGORIES) {
-            val menuViewModel: MenuViewModel = hiltViewModel()
+        composable(Routes.CATEGORIES) { currentEntry ->
+            val homeEntry = remember(currentEntry) { navController.getBackStackEntry(Routes.HOME) }
+            val menuViewModel: MenuViewModel = hiltViewModel(homeEntry)
             CategoryScreen(
                 onBack = { navController.popBackStack() },
                 viewModel = menuViewModel

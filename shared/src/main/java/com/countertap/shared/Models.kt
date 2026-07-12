@@ -4,6 +4,26 @@ import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.util.Date
 
+data class ProductOption(
+    val id: String = "",
+    val name: String = "",
+    val priceAddon: Double = 0.0
+)
+
+data class OptionGroup(
+    val id: String = "",
+    val name: String = "",
+    val required: Boolean = false,
+    val multiSelect: Boolean = false,
+    val options: List<ProductOption> = emptyList()
+)
+
+data class SelectedOption(
+    val groupName: String = "",
+    val optionName: String = "",
+    val priceAddon: Double = 0.0
+)
+
 data class Product(
     @DocumentId val id: String = "",
     val name: String = "",
@@ -12,6 +32,7 @@ data class Product(
     val imageUrl: String = "",
     val categoryId: String = "",
     val available: Boolean = true,
+    val optionGroups: List<OptionGroup> = emptyList(),
     @ServerTimestamp val createdAt: Date? = null
 )
 
@@ -49,7 +70,8 @@ data class OrderItem(
     val productId: String = "",
     val productName: String = "",
     val quantity: Int = 0,
-    val price: Double = 0.0
+    val price: Double = 0.0,
+    val selectedOptions: List<SelectedOption> = emptyList()
 )
 
 object OrderStatus {

@@ -132,9 +132,17 @@ fun CartScreen(
                             fontWeight = FontWeight.SemiBold,
                             color = TextPrimary
                         )
+                        if (cartItem.selectedOptions.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = cartItem.selectedOptions.joinToString(" · ") { it.optionName },
+                                fontSize = 11.sp,
+                                color = AccentBlue
+                            )
+                        }
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            "₹${cartItem.product.price.toInt()} each",
+                            "₹${cartItem.unitPrice.toInt()} each",
                             fontSize = 12.sp,
                             color = TextSecondary
                         )
@@ -146,7 +154,7 @@ fun CartScreen(
                             .background(CardElevated)
                     ) {
                         IconButton(
-                            onClick = { viewModel.remove(cartItem.product) },
+                            onClick = { viewModel.removeConfigured(cartItem.product, cartItem.selectedOptions) },
                             modifier = Modifier.size(36.dp)
                         ) {
                             Icon(Icons.Default.Remove, contentDescription = "Remove", tint = AccentBlue, modifier = Modifier.size(16.dp))
@@ -159,7 +167,7 @@ fun CartScreen(
                             modifier = Modifier.padding(horizontal = 2.dp)
                         )
                         IconButton(
-                            onClick = { viewModel.add(cartItem.product) },
+                            onClick = { viewModel.addConfigured(cartItem.product, cartItem.selectedOptions) },
                             modifier = Modifier.size(36.dp)
                         ) {
                             Icon(Icons.Default.Add, contentDescription = "Add", tint = AccentBlue, modifier = Modifier.size(16.dp))
@@ -167,7 +175,7 @@ fun CartScreen(
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        "₹${(cartItem.product.price * cartItem.quantity).toInt()}",
+                        "₹${(cartItem.unitPrice * cartItem.quantity).toInt()}",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = AccentBlue,

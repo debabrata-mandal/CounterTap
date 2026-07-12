@@ -1,6 +1,7 @@
 package com.countertap.customer.ui.menu
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -22,19 +22,34 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,12 +61,18 @@ import com.countertap.customer.ui.theme.AccentBlue
 import com.countertap.customer.ui.theme.BackgroundDark
 import com.countertap.customer.ui.theme.CardBackground
 import com.countertap.customer.ui.theme.CardElevated
+import com.countertap.customer.ui.theme.SurfaceColor
 import com.countertap.customer.ui.theme.TextPrimary
 import com.countertap.customer.ui.theme.TextSecondary
+import com.countertap.customer.ui.theme.WarningOrange
 import com.countertap.customer.viewmodel.CartViewModel
 import com.countertap.customer.viewmodel.MenuViewModel
+import com.countertap.shared.OptionGroup
 import com.countertap.shared.Product
+import com.countertap.shared.SelectedOption
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MenuScreen(
     tenantId: String,
@@ -62,9 +83,27 @@ fun MenuScreen(
 ) {
     val uiState by menuViewModel.uiState.collectAsState()
     val cartItems by cartViewModel.items.collectAsState()
-    val cartCount = cartItems.sumOf { it.quantity }
+    val isShopOpen = uiState.shop?.active ?: true
+    val cartCount = if (isShopOpen) cartItems.sumOf { it.quantity } else 0
+    val cartTotal = cartItems.sumOf { it.unitPrice * it.quantity }
+
+    var pickerProduct by remember { mutableStateOf<Product?>(null) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(tenantId) { menuViewModel.loadShop(tenantId) }
+
+    if (pickerProduct != null) {
+        OptionPickerSheet(
+            product = pickerProduct!!,
+            sheetState = sheetState,
+            onDismiss = { pickerProduct = null },
+            onAddToCart = { selectedOptions ->
+                cartViewModel.addConfigured(pickerProduct!!, selectedOptions)
+                scope.launch { sheetState.hide() }.invokeOnCompletion { pickerProduct = null }
+            }
+        )
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(BackgroundDark)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -100,6 +139,38 @@ fun MenuScreen(
                         contentDescription = "Change Restaurant",
                         tint = AccentBlue
                     )
+                }
+            }
+
+            // Closed banner
+            if (!isShopOpen && uiState.shop != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(WarningOrange.copy(alpha = 0.15f))
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = WarningOrange,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Column {
+                        Text(
+                            "Shop is currently closed",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = WarningOrange
+                        )
+                        Text(
+                            "You can browse the menu but cannot place orders",
+                            fontSize = 12.sp,
+                            color = TextSecondary
+                        )
+                    }
                 }
             }
 
@@ -141,9 +212,11 @@ fun MenuScreen(
                                     items(products) { product ->
                                         ProductCard(
                                             product = product,
-                                            quantity = cartItems.find { it.product.id == product.id }?.quantity ?: 0,
+                                            quantity = cartViewModel.quantityOf(product.id),
                                             onAdd = { cartViewModel.add(product) },
-                                            onRemove = { cartViewModel.remove(product) }
+                                            onRemove = { cartViewModel.remove(product) },
+                                            onOpenPicker = { pickerProduct = product },
+                                            isShopOpen = isShopOpen
                                         )
                                     }
                                 }
@@ -157,7 +230,9 @@ fun MenuScreen(
                                         product = product,
                                         quantity = cartViewModel.quantityOf(product.id),
                                         onAdd = { cartViewModel.add(product) },
-                                        onRemove = { cartViewModel.remove(product) }
+                                        onRemove = { cartViewModel.remove(product) },
+                                        onOpenPicker = { pickerProduct = product },
+                                        isShopOpen = isShopOpen
                                     )
                                 }
                             }
@@ -183,11 +258,187 @@ fun MenuScreen(
                 Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = TextPrimary)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "View Cart  •  $cartCount item${if (cartCount > 1) "s" else ""}  •  ₹${cartItems.sumOf { it.product.price * it.quantity }.toInt()}",
+                    text = "View Cart  •  $cartCount item${if (cartCount > 1) "s" else ""}  •  ₹${cartTotal.toInt()}",
                     color = TextPrimary,
                     fontWeight = FontWeight.SemiBold
                 )
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun OptionPickerSheet(
+    product: Product,
+    sheetState: SheetState,
+    onDismiss: () -> Unit,
+    onAddToCart: (List<SelectedOption>) -> Unit
+) {
+    // groupId -> set of selected optionIds
+    val selections = remember { mutableStateMapOf<String, Set<String>>() }
+
+    val allRequiredMet = product.optionGroups
+        .filter { it.required }
+        .all { group -> (selections[group.id]?.size ?: 0) > 0 }
+
+    val selectedOptions: List<SelectedOption> = product.optionGroups.flatMap { group ->
+        val selectedIds = selections[group.id] ?: emptySet()
+        group.options
+            .filter { it.id in selectedIds }
+            .map { option -> SelectedOption(groupName = group.name, optionName = option.name, priceAddon = option.priceAddon) }
+    }
+
+    val extraPrice = selectedOptions.sumOf { it.priceAddon }
+    val totalUnit = product.price + extraPrice
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = SurfaceColor
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .navigationBarsPadding()
+        ) {
+            // Product title
+            Text(product.name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            if (product.description.isNotBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(product.description, fontSize = 13.sp, color = TextSecondary)
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "Base price: ₹${product.price.toInt()}",
+                fontSize = 13.sp,
+                color = AccentBlue,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(color = CardElevated)
+
+            // Option groups
+            product.optionGroups.forEach { group ->
+                Spacer(modifier = Modifier.height(16.dp))
+                OptionGroupSection(
+                    group = group,
+                    selectedIds = selections[group.id] ?: emptySet(),
+                    onSelect = { optionId ->
+                        if (group.multiSelect) {
+                            val current = selections[group.id] ?: emptySet()
+                            selections[group.id] = if (optionId in current) current - optionId else current + optionId
+                        } else {
+                            selections[group.id] = setOf(optionId)
+                        }
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Add to cart button
+            Button(
+                onClick = { onAddToCart(selectedOptions) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
+                shape = RoundedCornerShape(12.dp),
+                enabled = allRequiredMet
+            ) {
+                Text(
+                    text = if (extraPrice > 0) "Add to Cart  •  ₹${totalUnit.toInt()}" else "Add to Cart  •  ₹${product.price.toInt()}",
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun OptionGroupSection(
+    group: OptionGroup,
+    selectedIds: Set<String>,
+    onSelect: (String) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(group.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (group.required) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(WarningOrange.copy(alpha = 0.2f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text("Required", fontSize = 10.sp, color = WarningOrange, fontWeight = FontWeight.Bold)
+                    }
+                }
+                if (group.multiSelect) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(AccentBlue.copy(alpha = 0.15f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text("Pick many", fontSize = 10.sp, color = AccentBlue, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        group.options.forEach { option ->
+            val isSelected = option.id in selectedIds
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (isSelected) AccentBlue.copy(alpha = 0.1f) else CardBackground)
+                    .clickable { onSelect(option.id) }
+                    .padding(horizontal = 4.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (group.multiSelect) {
+                    Checkbox(
+                        checked = isSelected,
+                        onCheckedChange = { onSelect(option.id) },
+                        colors = CheckboxDefaults.colors(checkedColor = AccentBlue)
+                    )
+                } else {
+                    RadioButton(
+                        selected = isSelected,
+                        onClick = { onSelect(option.id) },
+                        colors = RadioButtonDefaults.colors(selectedColor = AccentBlue)
+                    )
+                }
+                Text(
+                    text = option.name,
+                    fontSize = 14.sp,
+                    color = TextPrimary,
+                    modifier = Modifier.weight(1f)
+                )
+                if (option.priceAddon > 0) {
+                    Text(
+                        text = "+₹${option.priceAddon.toInt()}",
+                        fontSize = 13.sp,
+                        color = AccentBlue,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            Spacer(modifier = Modifier.height(4.dp))
         }
     }
 }
@@ -221,8 +472,12 @@ private fun ProductCard(
     product: Product,
     quantity: Int,
     onAdd: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    onOpenPicker: () -> Unit = {},
+    isShopOpen: Boolean = true
 ) {
+    val hasOptions = product.optionGroups.isNotEmpty()
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -260,51 +515,100 @@ private fun ProductCard(
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(AccentBlue.copy(alpha = 0.15f))
-                    .padding(horizontal = 8.dp, vertical = 2.dp)
-            ) {
-                Text(
-                    text = "₹${product.price.toInt()}",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AccentBlue
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(AccentBlue.copy(alpha = 0.15f))
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "₹${product.price.toInt()}",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AccentBlue
+                    )
+                }
+                if (hasOptions) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(CardElevated)
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "Customisable",
+                            fontSize = 11.sp,
+                            color = TextSecondary
+                        )
+                    }
+                }
             }
         }
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        if (quantity == 0) {
-            Button(
-                onClick = onAdd,
-                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.height(36.dp)
-            ) {
-                Text("ADD", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-            }
-        } else {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(CardElevated)
-            ) {
-                IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.Remove, contentDescription = "Remove", tint = AccentBlue, modifier = Modifier.size(16.dp))
+        if (isShopOpen) {
+            if (hasOptions) {
+                if (quantity == 0) {
+                    Button(
+                        onClick = onOpenPicker,
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Text("ADD", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    }
+                } else {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(AccentBlue.copy(alpha = 0.15f))
+                    ) {
+                        Text(
+                            text = "$quantity in cart",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = AccentBlue,
+                            modifier = Modifier.padding(start = 10.dp)
+                        )
+                        IconButton(onClick = onOpenPicker, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Default.Add, contentDescription = "Add more", tint = AccentBlue, modifier = Modifier.size(16.dp))
+                        }
+                    }
                 }
-                Text(
-                    text = quantity.toString(),
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
-                    modifier = Modifier.padding(horizontal = 2.dp)
-                )
-                IconButton(onClick = onAdd, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.Add, contentDescription = "Add", tint = AccentBlue, modifier = Modifier.size(16.dp))
+            } else {
+                if (quantity == 0) {
+                    Button(
+                        onClick = onAdd,
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Text("ADD", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    }
+                } else {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(CardElevated)
+                    ) {
+                        IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Default.Remove, contentDescription = "Remove", tint = AccentBlue, modifier = Modifier.size(16.dp))
+                        }
+                        Text(
+                            text = quantity.toString(),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                            modifier = Modifier.padding(horizontal = 2.dp)
+                        )
+                        IconButton(onClick = onAdd, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Default.Add, contentDescription = "Add", tint = AccentBlue, modifier = Modifier.size(16.dp))
+                        }
+                    }
                 }
             }
         }
