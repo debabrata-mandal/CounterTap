@@ -113,7 +113,7 @@ fun TableManagementScreen(viewModel: TablesViewModel = hiltViewModel()) {
                         items(uiState.openSessions, key = { it.id }) { session ->
                             SessionCard(
                                 session = session,
-                                onClose = { viewModel.closeSession(session.id) }
+                                onClose = { viewModel.settleAndCloseSession(session.id) }
                             )
                         }
                         item { Spacer(Modifier.height(16.dp)) }
@@ -238,13 +238,13 @@ private fun SessionCard(session: TableSession, onClose: () -> Unit) {
             color = TextSecondary
         )
         Spacer(Modifier.height(10.dp))
-        OutlinedButton(
+        Button(
             onClick = onClose,
-            modifier = Modifier.fillMaxWidth().height(36.dp),
+            modifier = Modifier.fillMaxWidth().height(40.dp),
             shape = RoundedCornerShape(8.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, DividerColor)
+            colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen)
         ) {
-            Text("Close Session", fontSize = 13.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
+            Text("Settle & Close  •  ₹${session.totalAmount.toInt()}", fontSize = 13.sp, color = TextPrimary, fontWeight = FontWeight.Bold)
         }
     }
 }

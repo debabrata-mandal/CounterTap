@@ -104,7 +104,7 @@ class OrdersViewModel @Inject constructor(
                     isFirstLoad = false
                     knownOrderIds = currentIds
 
-                    _uiState.value = OrdersUiState(isLoading = false, activeOrders = active, doneOrders = done)
+                    _uiState.value = _uiState.value.copy(isLoading = false, activeOrders = active, doneOrders = done)
                 }
             } catch (e: Exception) {
                 _uiState.value = OrdersUiState(isLoading = false, error = e.message ?: "Failed to load orders")
@@ -159,10 +159,10 @@ class OrdersViewModel @Inject constructor(
         }
     }
 
-    fun closeSession(sessionId: String) {
+    fun settleAndCloseSession(sessionId: String) {
         val tid = tenantId ?: return
         viewModelScope.launch {
-            try { tablesRepository.closeSession(tid, sessionId) }
+            try { tablesRepository.settleAndCloseSession(tid, sessionId) }
             catch (e: Exception) { _uiState.value = _uiState.value.copy(error = e.message) }
         }
     }

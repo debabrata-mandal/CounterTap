@@ -1,5 +1,7 @@
 package com.countertap.business.repository
 
+import com.countertap.shared.Order
+import com.countertap.shared.OrderStatus
 import com.countertap.shared.Table
 import com.countertap.shared.TableSession
 import com.countertap.shared.TableSessionStatus
@@ -51,10 +53,40 @@ class TablesRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    suspend fun closeSession(tenantId: String, sessionId: String) {
-        sessionsRef(tenantId).document(sessionId)
-            .update(mapOf("status" to TableSessionStatus.CLOSED, "closedAt" to Date()))
-            .await()
+    suspend fun settleAndCloseSession(tenantId: String, sessionId: String) {
+        val sessionRef = sessionsRef(tenantId).document(sessionId)
+        val session = sessionRef.get().await().toObject(TableSession::class.java) ?: return
+
+        val batch = firestore.batch()
+
+        // Close and mark the session as paid
+        batch.update(sessionRef, mapOf(
+            "status" to TableSessionStatus.CLOSED,
+            "closedAt" to Date(),
+            "paymentStatus" to "paid",
+            "paidVia" to "cash"
+        ))
+
+        // Complete and mark paid for every non-cancelled order in this session
+        for (orderId in session.orderIds) {
+            val orderRef = firestore.collection("tenants").document(tenantId)
+                .collection("orders").document(orderId)
+            val order = orderRef.get().await().toObject(Order::class.java) ?: continue
+            if (order.status == OrderStatus.CANCELLED) continue
+
+            val updates = mapOf("status" to OrderStatus.COMPLETED, "paymentStatus" to "paid")
+            batch.update(orderRef, updates)
+
+            if (order.customerId.isNotBlank()) {
+                batch.update(
+                    firestore.collection("users").document(order.customerId)
+                        .collection("orders").document(orderId),
+                    updates
+                )
+            }
+        }
+
+        batch.commit().await()
     }
 
     suspend fun addOrderToSession(

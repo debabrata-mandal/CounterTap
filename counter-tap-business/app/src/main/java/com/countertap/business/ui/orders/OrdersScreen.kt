@@ -197,19 +197,22 @@ private fun TableSessionsTab(uiState: OrdersUiState, viewModel: OrdersViewModel)
         return
     }
 
+    // All orders (active + done) so session cards show the full running bill
+    val allOrders = uiState.activeOrders + uiState.doneOrders
+
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item { SectionHeader("ACTIVE SESSIONS", uiState.openSessions.size) }
         items(uiState.openSessions, key = { it.id }) { session ->
-            val sessionOrders = uiState.activeOrders.filter { it.tableSessionId == session.id }
+            val sessionOrders = allOrders
+                .filter { it.tableSessionId == session.id }
+                .sortedBy { it.createdAt }
             TableSessionCard(
                 session = session,
                 orders = sessionOrders,
-                onCloseSession = { viewModel.closeSession(session.id) },
+                onSettle = { viewModel.settleAndCloseSession(session.id) },
                 onAccept = { order -> viewModel.updateStatus(order.id, order.customerId, OrderStatus.CONFIRMED) },
                 onReject = { order -> viewModel.updateStatus(order.id, order.customerId, OrderStatus.CANCELLED) },
-                onReady = { order -> viewModel.updateStatus(order.id, order.customerId, OrderStatus.READY) },
-                onComplete = { order -> viewModel.updateStatus(order.id, order.customerId, OrderStatus.COMPLETED) },
-                onMarkPaid = { order -> viewModel.markAsPaid(order.id) }
+                onReady  = { order -> viewModel.updateStatus(order.id, order.customerId, OrderStatus.READY) }
             )
         }
         item { Spacer(Modifier.height(80.dp)) }
@@ -220,12 +223,10 @@ private fun TableSessionsTab(uiState: OrdersUiState, viewModel: OrdersViewModel)
 private fun TableSessionCard(
     session: TableSession,
     orders: List<Order>,
-    onCloseSession: () -> Unit,
+    onSettle: () -> Unit,
     onAccept: (Order) -> Unit,
     onReject: (Order) -> Unit,
-    onReady: (Order) -> Unit,
-    onComplete: (Order) -> Unit,
-    onMarkPaid: (Order) -> Unit
+    onReady: (Order) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -246,39 +247,149 @@ private fun TableSessionCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.TableRestaurant, contentDescription = null, tint = AccentBlue, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(session.tableName, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Column {
+                    Text(session.tableName, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text(
+                        "${orders.size} order${if (orders.size != 1) "s" else ""}",
+                        fontSize = 12.sp,
+                        color = TextSecondary
+                    )
+                }
             }
-            Text("₹${session.totalAmount.toInt()}", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AccentBlue)
+            Text("₹${session.totalAmount.toInt()}", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = AccentBlue)
         }
 
-        // Orders in session
-        orders.forEach { order ->
-            HorizontalDivider(color = DividerColor)
-            OrderCard(
-                order = order,
-                onAccept = { onAccept(order) },
-                onReject = { onReject(order) },
-                onReady = { onReady(order) },
-                onComplete = { onComplete(order) },
-                onMarkPaid = { onMarkPaid(order) }
-            )
-        }
-
+        // Orders in session — kitchen-only actions, no per-order payment
         if (orders.isEmpty()) {
             HorizontalDivider(color = DividerColor)
             Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                Text("No active orders for this table", fontSize = 13.sp, color = TextHint)
+                Text("No orders yet", fontSize = 13.sp, color = TextHint)
+            }
+        } else {
+            orders.forEach { order ->
+                HorizontalDivider(color = DividerColor)
+                TableOrderCard(
+                    order = order,
+                    onAccept = { onAccept(order) },
+                    onReject = { onReject(order) },
+                    onReady  = { onReady(order) }
+                )
             }
         }
 
-        // Close session
-        OutlinedButton(
-            onClick = onCloseSession,
-            modifier = Modifier.fillMaxWidth().padding(12.dp).height(36.dp),
+        // Settle & Close — pays all orders and closes session atomically
+        HorizontalDivider(color = DividerColor)
+        Button(
+            onClick = onSettle,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+                .height(44.dp),
             shape = RoundedCornerShape(8.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, DividerColor)
+            colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen)
         ) {
-            Text("Close Session", fontSize = 13.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
+            Text(
+                "Settle & Close  •  ₹${session.totalAmount.toInt()}",
+                fontSize = 14.sp,
+                color = TextPrimary,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun TableOrderCard(
+    order: Order,
+    onAccept: () -> Unit,
+    onReject: () -> Unit,
+    onReady: () -> Unit
+) {
+    val accentColor = statusColor(order.status)
+    val timeStr = order.createdAt?.let {
+        SimpleDateFormat("hh:mm a", Locale.getDefault()).format(it)
+    } ?: ""
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatusBadge(order.status)
+                if (order.customerName.isNotBlank()) {
+                    Text(order.customerName, fontSize = 12.sp, color = TextSecondary)
+                }
+            }
+            Text(timeStr, fontSize = 12.sp, color = TextHint)
+        }
+
+        Spacer(Modifier.height(8.dp))
+        order.items.forEach { item ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    "${item.quantity}×  ${item.productName}",
+                    fontSize = 13.sp,
+                    color = TextPrimary,
+                    modifier = Modifier.weight(1f)
+                )
+                Text("₹${(item.price * item.quantity).toInt()}", fontSize = 13.sp, color = TextSecondary)
+            }
+            if (item.selectedOptions.isNotEmpty()) {
+                Text(
+                    item.selectedOptions.joinToString(" · ") { it.optionName },
+                    fontSize = 11.sp,
+                    color = AccentBlue,
+                    modifier = Modifier.padding(start = 22.dp, top = 1.dp)
+                )
+            }
+        }
+
+        if (order.note.isNotBlank()) {
+            Spacer(Modifier.height(4.dp))
+            Text("Note: ${order.note}", fontSize = 11.sp, color = TextHint)
+        }
+
+        // Kitchen actions only — no Complete, no Mark Paid for table orders
+        val actions = actionsFor(order.status)
+        if (actions.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                actions.forEach { action ->
+                    when (action) {
+                        Action.ACCEPT -> Button(
+                            onClick = onAccept,
+                            modifier = Modifier.weight(1f).height(34.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
+                            shape = RoundedCornerShape(8.dp)
+                        ) { Text("Accept", fontSize = 12.sp, color = TextPrimary, fontWeight = FontWeight.Bold) }
+
+                        Action.REJECT -> OutlinedButton(
+                            onClick = onReject,
+                            modifier = Modifier.weight(1f).height(34.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, ErrorRed)
+                        ) { Text("Reject", fontSize = 12.sp, color = ErrorRed, fontWeight = FontWeight.Bold) }
+
+                        Action.MARK_READY -> Button(
+                            onClick = onReady,
+                            modifier = Modifier.fillMaxWidth().height(34.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
+                            shape = RoundedCornerShape(8.dp)
+                        ) { Text("Mark Ready", fontSize = 12.sp, color = TextPrimary, fontWeight = FontWeight.Bold) }
+
+                        Action.COMPLETE -> { /* handled at session level via Settle & Close */ }
+                    }
+                }
+            }
         }
     }
 }

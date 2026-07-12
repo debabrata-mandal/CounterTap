@@ -123,7 +123,6 @@ class CartViewModel @Inject constructor(
                 val shopName = shopHistory.getRecentShops().find { it.tenantId == tenantId }?.name ?: ""
                 orderRepository.saveToUserHistory(user.uid, orderId, tenantId, shopName, order)
                 activeOrderRepository.saveActiveOrder(tenantId, orderId, shopName)
-                tableContextHolder.clear()
                 _items.value = emptyList()
                 _orderState.value = OrderState.Success(orderId)
             } catch (e: Exception) {

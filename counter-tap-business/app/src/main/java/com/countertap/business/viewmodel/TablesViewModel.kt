@@ -98,10 +98,10 @@ class TablesViewModel @Inject constructor(
         }
     }
 
-    fun closeSession(sessionId: String) {
+    fun settleAndCloseSession(sessionId: String) {
         val tid = tenantId ?: return
         viewModelScope.launch {
-            try { tablesRepository.closeSession(tid, sessionId) }
+            try { tablesRepository.settleAndCloseSession(tid, sessionId) }
             catch (e: Exception) { _uiState.value = _uiState.value.copy(error = e.message) }
         }
     }
