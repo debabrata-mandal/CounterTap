@@ -31,6 +31,7 @@ class TablePickerViewModel @Inject constructor(
     private var tenantId: String = ""
 
     fun loadTables(tenantId: String) {
+        if (this.tenantId != tenantId) tableContextHolder.clear() // new restaurant — discard stale selection
         if (this.tenantId == tenantId && _state.value !is TablePickerState.Loading) return
         this.tenantId = tenantId
         viewModelScope.launch {

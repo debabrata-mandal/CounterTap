@@ -24,6 +24,8 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Pending
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.TableRestaurant
+import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.automirrored.filled.TrendingFlat
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -65,7 +67,7 @@ import java.util.Locale
 
 @Composable
 fun DashboardScreen(
-    onNavigateToOrders: () -> Unit = {},
+    onNavigateToOrders: (orderId: String) -> Unit = {},
     viewModel: DashboardViewModel = hiltViewModel(),
     tenantViewModel: TenantViewModel = hiltViewModel()
 ) {
@@ -325,7 +327,7 @@ fun DashboardScreen(
 
                         state.activeOrders.forEach { order ->
                             item(key = order.id) {
-                                MiniOrderCard(order = order, onClick = onNavigateToOrders)
+                                MiniOrderCard(order = order, onClick = { onNavigateToOrders(order.id) })
                             }
                         }
                     }
@@ -537,6 +539,31 @@ private fun MiniOrderCard(order: Order, onClick: () -> Unit = {}) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            Spacer(Modifier.height(6.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(
+                        if (order.tableName.isNotBlank()) AccentBlue.copy(alpha = 0.12f)
+                        else TextHint.copy(alpha = 0.10f)
+                    )
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
+            ) {
+                Icon(
+                    if (order.tableName.isNotBlank()) Icons.Default.TableRestaurant else Icons.Default.ShoppingBag,
+                    contentDescription = null,
+                    tint = if (order.tableName.isNotBlank()) AccentBlue else TextHint,
+                    modifier = Modifier.size(11.dp)
+                )
+                Text(
+                    if (order.tableName.isNotBlank()) order.tableName else "Takeaway",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (order.tableName.isNotBlank()) AccentBlue else TextHint
+                )
+            }
         }
     }
 }

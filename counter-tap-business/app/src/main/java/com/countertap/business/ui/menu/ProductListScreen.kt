@@ -278,8 +278,7 @@ fun ProductListScreen(
 
                         LazyColumn(
                             state = listState,
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(bottom = 100.dp)
+                            modifier = Modifier.fillMaxSize()
                         ) {
                             categoriesWithProducts.forEach { category ->
                                 val products = grouped[category.id] ?: emptyList()
@@ -370,7 +369,7 @@ private fun SectionHeader(name: String, count: Int, color: Color = AccentBlue) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 8.dp),
+            .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {

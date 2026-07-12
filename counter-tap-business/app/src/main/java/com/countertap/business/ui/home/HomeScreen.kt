@@ -42,6 +42,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -96,6 +98,7 @@ fun HomeScreen(
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    var focusedOrderId by remember { mutableStateOf<String?>(null) }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -236,8 +239,11 @@ fun HomeScreen(
 
             Box(modifier = Modifier.weight(1f)) {
                 when (selectedTab) {
-                    0 -> DashboardScreen(onNavigateToOrders = { selectedTab = 1 })
-                    1 -> OrdersScreen()
+                    0 -> DashboardScreen(onNavigateToOrders = { orderId ->
+                        focusedOrderId = orderId
+                        selectedTab = 1
+                    })
+                    1 -> OrdersScreen(focusedOrderId = focusedOrderId)
                     2 -> ProductListScreen(
                         onAddProduct = onAddProduct,
                         onEditProduct = onEditProduct,

@@ -89,7 +89,7 @@ fun TableManagementScreen(viewModel: TablesViewModel = hiltViewModel()) {
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 8.dp)
             )
 
             when {
@@ -148,7 +148,7 @@ fun TableManagementScreen(viewModel: TablesViewModel = hiltViewModel()) {
 @Composable
 private fun SectionLabel(text: String, color: androidx.compose.ui.graphics.Color) {
     Row(
-        modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 10.dp, end = 20.dp),
+        modifier = Modifier.padding(start = 20.dp, top = 0.dp, bottom = 10.dp, end = 20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(

@@ -1,7 +1,6 @@
 package com.countertap.business.ui.orders
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,12 +13,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.TableRestaurant
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -29,11 +29,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,7 +43,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.countertap.business.ui.theme.AccentBlue
 import com.countertap.business.ui.theme.BackgroundDark
 import com.countertap.business.ui.theme.CardBackground
-import com.countertap.business.ui.theme.CardElevated
 import com.countertap.business.ui.theme.DividerColor
 import com.countertap.business.ui.theme.ErrorRed
 import com.countertap.business.ui.theme.SuccessGreen
@@ -62,30 +59,51 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 @Composable
-fun OrdersScreen(viewModel: OrdersViewModel = hiltViewModel()) {
+fun OrdersScreen(
+    viewModel: OrdersViewModel = hiltViewModel(),
+    focusedOrderId: String? = null
+) {
     val uiState by viewModel.uiState.collectAsState()
-    val hasTables = uiState.openSessions.isNotEmpty() ||
-            uiState.activeOrders.any { it.tableSessionId.isNotEmpty() }
-    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    val listState = rememberLazyListState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(BackgroundDark)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = if (hasTables) 4.dp else 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Orders", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-        }
+    val allOrders = uiState.activeOrders + uiState.doneOrders
+    val activeTakeaway = uiState.activeOrders.filter { it.tableSessionId.isEmpty() }
+    val doneOrders = uiState.doneOrders
 
-        // Sub-tabs — only shown when table orders exist
-        if (hasTables) {
-            OrdersSubTabs(selectedTab = selectedTab, onTabSelected = { selectedTab = it })
+    // Scroll to the focused order (from dashboard tap)
+    LaunchedEffect(focusedOrderId, uiState.isLoading) {
+        if (focusedOrderId == null || uiState.isLoading) return@LaunchedEffect
+        val hasSessions = uiState.openSessions.isNotEmpty()
+        var idx = 0
+        if (hasSessions) {
+            idx++ // sessions header
+            val sessionIdx = uiState.openSessions.indexOfFirst { session ->
+                allOrders.any { it.tableSessionId == session.id && it.id == focusedOrderId }
+            }
+            if (sessionIdx >= 0) {
+                listState.animateScrollToItem(idx + sessionIdx)
+                return@LaunchedEffect
+            }
+            idx += uiState.openSessions.size
         }
+        if (activeTakeaway.isNotEmpty()) {
+            idx++ // active header
+            val orderIdx = activeTakeaway.indexOfFirst { it.id == focusedOrderId }
+            if (orderIdx >= 0) {
+                listState.animateScrollToItem(idx + orderIdx)
+                return@LaunchedEffect
+            }
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize().background(BackgroundDark)) {
+        Text(
+            "Orders",
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary,
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 16.dp)
+        )
 
         when {
             uiState.isLoading -> Box(
@@ -98,124 +116,66 @@ fun OrdersScreen(viewModel: OrdersViewModel = hiltViewModel()) {
                 contentAlignment = Alignment.Center
             ) { Text(uiState.error!!, color = TextSecondary, fontSize = 14.sp) }
 
-            else -> if (hasTables && selectedTab == 1) {
-                TableSessionsTab(uiState, viewModel)
-            } else {
-                IndividualOrdersTab(uiState, viewModel)
+            uiState.openSessions.isEmpty() && uiState.activeOrders.isEmpty() && uiState.doneOrders.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("No orders yet", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                        Spacer(Modifier.height(6.dp))
+                        Text("New orders will appear here in real time", fontSize = 14.sp, color = TextSecondary)
+                    }
+                }
+            }
+
+            else -> LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                // Table sessions — shown first so owner can quickly action them
+                if (uiState.openSessions.isNotEmpty()) {
+                    item { SectionHeader("TABLE SESSIONS", uiState.openSessions.size, WarningOrange) }
+                    items(uiState.openSessions, key = { it.id }) { session ->
+                        val sessionOrders = allOrders
+                            .filter { it.tableSessionId == session.id }
+                            .sortedBy { it.createdAt }
+                        TableSessionCard(
+                            session = session,
+                            orders = sessionOrders,
+                            onSettle = { viewModel.settleAndCloseSession(session.id) },
+                            onAccept = { order -> viewModel.updateStatus(order.id, order.customerId, OrderStatus.CONFIRMED) },
+                            onReject = { order -> viewModel.updateStatus(order.id, order.customerId, OrderStatus.CANCELLED) },
+                            onReady  = { order -> viewModel.updateStatus(order.id, order.customerId, OrderStatus.READY) }
+                        )
+                    }
+                }
+
+                // Takeaway active orders
+                if (activeTakeaway.isNotEmpty()) {
+                    item { SectionHeader("ACTIVE", activeTakeaway.size, AccentBlue) }
+                    items(activeTakeaway, key = { it.id }) { order ->
+                        OrderCard(
+                            order = order,
+                            isHighlighted = order.id == focusedOrderId,
+                            onAccept = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.CONFIRMED) },
+                            onReject = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.CANCELLED) },
+                            onReady  = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.READY) },
+                            onComplete = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.COMPLETED) },
+                            onMarkPaid = { viewModel.markAsPaid(order.id) }
+                        )
+                    }
+                }
+
+                // Done / cancelled orders (all, including settled table orders)
+                if (doneOrders.isNotEmpty()) {
+                    item { SectionHeader("COMPLETED / CANCELLED", doneOrders.size, TextHint) }
+                    items(doneOrders, key = { it.id }) { order ->
+                        OrderCard(
+                            order = order,
+                            isHighlighted = false,
+                            onAccept = {}, onReject = {}, onReady = {}, onComplete = {}, onMarkPaid = {}
+                        )
+                    }
+                }
+
+                item { Spacer(Modifier.height(80.dp)) }
             }
         }
-    }
-}
-
-@Composable
-private fun OrdersSubTabs(selectedTab: Int, onTabSelected: (Int) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(CardBackground)
-            .padding(4.dp)
-    ) {
-        listOf("Individual", "Tables").forEachIndexed { index, label ->
-            val isSelected = index == selectedTab
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(if (isSelected) AccentBlue.copy(alpha = 0.2f) else Color.Transparent)
-                    .clickable { onTabSelected(index) }
-                    .padding(vertical = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    label,
-                    fontSize = 13.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isSelected) AccentBlue else TextSecondary
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun IndividualOrdersTab(uiState: OrdersUiState, viewModel: OrdersViewModel) {
-    val activeOrders = uiState.activeOrders.filter { it.tableSessionId.isEmpty() }
-    val doneOrders = uiState.doneOrders.filter { it.tableSessionId.isEmpty() }
-    // Fall back to all orders if no table sessions exist (shops without tables)
-    val showActive = if (uiState.openSessions.isEmpty() && uiState.activeOrders.none { it.tableSessionId.isNotEmpty() })
-        uiState.activeOrders else activeOrders
-    val showDone = if (uiState.openSessions.isEmpty() && uiState.activeOrders.none { it.tableSessionId.isNotEmpty() })
-        uiState.doneOrders else doneOrders
-
-    if (showActive.isEmpty() && showDone.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("No orders yet", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                Spacer(Modifier.height(6.dp))
-                Text("New orders will appear here in real time", fontSize = 14.sp, color = TextSecondary)
-            }
-        }
-        return
-    }
-
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        if (showActive.isNotEmpty()) {
-            item { SectionHeader("ACTIVE", showActive.size) }
-            items(showActive, key = { it.id }) { order ->
-                OrderCard(
-                    order = order,
-                    onAccept = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.CONFIRMED) },
-                    onReject = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.CANCELLED) },
-                    onReady = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.READY) },
-                    onComplete = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.COMPLETED) },
-                    onMarkPaid = { viewModel.markAsPaid(order.id) }
-                )
-            }
-        }
-        if (showDone.isNotEmpty()) {
-            item { SectionHeader("COMPLETED / CANCELLED", showDone.size) }
-            items(showDone, key = { it.id }) { order ->
-                OrderCard(order = order, onAccept = {}, onReject = {}, onReady = {}, onComplete = {}, onMarkPaid = {})
-            }
-        }
-        item { Spacer(Modifier.height(80.dp)) }
-    }
-}
-
-@Composable
-private fun TableSessionsTab(uiState: OrdersUiState, viewModel: OrdersViewModel) {
-    if (uiState.openSessions.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Default.TableRestaurant, contentDescription = null, tint = TextHint, modifier = Modifier.size(56.dp))
-                Spacer(Modifier.height(12.dp))
-                Text("No active table sessions", fontSize = 16.sp, color = TextSecondary)
-            }
-        }
-        return
-    }
-
-    // All orders (active + done) so session cards show the full running bill
-    val allOrders = uiState.activeOrders + uiState.doneOrders
-
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        item { SectionHeader("ACTIVE SESSIONS", uiState.openSessions.size) }
-        items(uiState.openSessions, key = { it.id }) { session ->
-            val sessionOrders = allOrders
-                .filter { it.tableSessionId == session.id }
-                .sortedBy { it.createdAt }
-            TableSessionCard(
-                session = session,
-                orders = sessionOrders,
-                onSettle = { viewModel.settleAndCloseSession(session.id) },
-                onAccept = { order -> viewModel.updateStatus(order.id, order.customerId, OrderStatus.CONFIRMED) },
-                onReject = { order -> viewModel.updateStatus(order.id, order.customerId, OrderStatus.CANCELLED) },
-                onReady  = { order -> viewModel.updateStatus(order.id, order.customerId, OrderStatus.READY) }
-            )
-        }
-        item { Spacer(Modifier.height(80.dp)) }
     }
 }
 
@@ -239,27 +199,27 @@ private fun TableSessionCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(AccentBlue.copy(alpha = 0.1f))
+                .background(WarningOrange.copy(alpha = 0.1f))
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.TableRestaurant, contentDescription = null, tint = AccentBlue, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.TableRestaurant, contentDescription = null, tint = WarningOrange, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Column {
                     Text(session.tableName, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     Text(
-                        "${orders.size} order${if (orders.size != 1) "s" else ""}",
+                        "${orders.size} order${if (orders.size != 1) "s" else ""}  •  ${session.customerIds.size} customer${if (session.customerIds.size != 1) "s" else ""}",
                         fontSize = 12.sp,
                         color = TextSecondary
                     )
                 }
             }
-            Text("₹${session.totalAmount.toInt()}", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = AccentBlue)
+            Text("₹${session.totalAmount.toInt()}", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = WarningOrange)
         }
 
-        // Orders in session — kitchen-only actions, no per-order payment
+        // Orders nested inside the session card — kitchen actions only
         if (orders.isEmpty()) {
             HorizontalDivider(color = DividerColor)
             Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
@@ -277,14 +237,11 @@ private fun TableSessionCard(
             }
         }
 
-        // Settle & Close — pays all orders and closes session atomically
+        // Settle & Close — marks all non-cancelled orders complete + paid in one batch
         HorizontalDivider(color = DividerColor)
         Button(
             onClick = onSettle,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-                .height(44.dp),
+            modifier = Modifier.fillMaxWidth().padding(12.dp).height(44.dp),
             shape = RoundedCornerShape(8.dp),
             colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen)
         ) {
@@ -305,7 +262,6 @@ private fun TableOrderCard(
     onReject: () -> Unit,
     onReady: () -> Unit
 ) {
-    val accentColor = statusColor(order.status)
     val timeStr = order.createdAt?.let {
         SimpleDateFormat("hh:mm a", Locale.getDefault()).format(it)
     } ?: ""
@@ -331,16 +287,8 @@ private fun TableOrderCard(
 
         Spacer(Modifier.height(8.dp))
         order.items.forEach { item ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    "${item.quantity}×  ${item.productName}",
-                    fontSize = 13.sp,
-                    color = TextPrimary,
-                    modifier = Modifier.weight(1f)
-                )
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("${item.quantity}×  ${item.productName}", fontSize = 13.sp, color = TextPrimary, modifier = Modifier.weight(1f))
                 Text("₹${(item.price * item.quantity).toInt()}", fontSize = 13.sp, color = TextSecondary)
             }
             if (item.selectedOptions.isNotEmpty()) {
@@ -358,7 +306,6 @@ private fun TableOrderCard(
             Text("Note: ${order.note}", fontSize = 11.sp, color = TextHint)
         }
 
-        // Kitchen actions only — no Complete, no Mark Paid for table orders
         val actions = actionsFor(order.status)
         if (actions.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
@@ -386,7 +333,7 @@ private fun TableOrderCard(
                             shape = RoundedCornerShape(8.dp)
                         ) { Text("Mark Ready", fontSize = 12.sp, color = TextPrimary, fontWeight = FontWeight.Bold) }
 
-                        Action.COMPLETE -> { /* handled at session level via Settle & Close */ }
+                        Action.COMPLETE -> { /* table orders complete at settle time */ }
                     }
                 }
             }
@@ -395,7 +342,7 @@ private fun TableOrderCard(
 }
 
 @Composable
-private fun SectionHeader(label: String, count: Int) {
+private fun SectionHeader(label: String, count: Int, color: Color = AccentBlue) {
     Row(
         modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 10.dp, end = 20.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -405,14 +352,14 @@ private fun SectionHeader(label: String, count: Int) {
                 .width(3.dp)
                 .height(14.dp)
                 .clip(RoundedCornerShape(2.dp))
-                .background(AccentBlue)
+                .background(color)
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = "$label  •  $count",
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
-            color = AccentBlue,
+            color = color,
             letterSpacing = 1.5.sp
         )
     }
@@ -421,6 +368,7 @@ private fun SectionHeader(label: String, count: Int) {
 @Composable
 private fun OrderCard(
     order: Order,
+    isHighlighted: Boolean = false,
     onAccept: () -> Unit,
     onReject: () -> Unit,
     onReady: () -> Unit,
@@ -438,13 +386,13 @@ private fun OrderCard(
             .padding(horizontal = 16.dp, vertical = 5.dp)
             .height(IntrinsicSize.Min)
             .clip(RoundedCornerShape(12.dp))
-            .background(CardBackground)
+            .background(if (isHighlighted) AccentBlue.copy(alpha = 0.08f) else CardBackground)
     ) {
         Box(
             modifier = Modifier
                 .width(4.dp)
                 .fillMaxHeight()
-                .background(accentColor)
+                .background(if (isHighlighted) AccentBlue else accentColor)
         )
 
         Column(
@@ -452,7 +400,6 @@ private fun OrderCard(
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 14.dp)
         ) {
-            // Header row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -467,45 +414,50 @@ private fun OrderCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     StatusBadge(order.status)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    // Table or takeaway chip
+                    val isTable = order.tableName.isNotBlank()
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(5.dp))
+                            .background(
+                                if (isTable) AccentBlue.copy(alpha = 0.12f)
+                                else TextHint.copy(alpha = 0.10f)
+                            )
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Icon(
+                            if (isTable) Icons.Default.TableRestaurant else Icons.Default.ShoppingBag,
+                            contentDescription = null,
+                            tint = if (isTable) AccentBlue else TextHint,
+                            modifier = Modifier.size(11.dp)
+                        )
+                        Text(
+                            if (isTable) order.tableName else "Takeaway",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isTable) AccentBlue else TextHint
+                        )
+                    }
                 }
                 Text(timeStr, fontSize = 12.sp, color = TextHint)
             }
 
-            // Customer
             if (order.customerName.isNotBlank()) {
                 Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    order.customerName,
-                    fontSize = 13.sp,
-                    color = TextSecondary
-                )
+                Text(order.customerName, fontSize = 13.sp, color = TextSecondary)
             }
 
-            // Items
             Spacer(modifier = Modifier.height(10.dp))
             HorizontalDivider(color = DividerColor)
             Spacer(modifier = Modifier.height(8.dp))
             order.items.forEach { item ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 2.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            "${item.quantity}×  ${item.productName}",
-                            fontSize = 14.sp,
-                            color = TextPrimary,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Text(
-                            "₹${(item.price * item.quantity).toInt()}",
-                            fontSize = 14.sp,
-                            color = TextSecondary
-                        )
+                Column(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("${item.quantity}×  ${item.productName}", fontSize = 14.sp, color = TextPrimary, modifier = Modifier.weight(1f))
+                        Text("₹${(item.price * item.quantity).toInt()}", fontSize = 14.sp, color = TextSecondary)
                     }
                     if (item.selectedOptions.isNotEmpty()) {
                         Text(
@@ -518,18 +470,11 @@ private fun OrderCard(
                 }
             }
 
-            // Note
             if (order.note.isNotBlank()) {
                 Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    "Note: ${order.note}",
-                    fontSize = 12.sp,
-                    color = TextHint,
-                    fontWeight = FontWeight.Medium
-                )
+                Text("Note: ${order.note}", fontSize = 12.sp, color = TextHint, fontWeight = FontWeight.Medium)
             }
 
-            // Total
             Spacer(modifier = Modifier.height(8.dp))
             HorizontalDivider(color = DividerColor)
             Spacer(modifier = Modifier.height(8.dp))
@@ -540,12 +485,7 @@ private fun OrderCard(
             ) {
                 Text("Total", fontSize = 14.sp, color = TextSecondary)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "₹${order.totalAmount.toInt()}",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = AccentBlue
-                    )
+                    Text("₹${order.totalAmount.toInt()}", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AccentBlue)
                     val isPaid = order.paymentStatus == "paid"
                     Box(
                         modifier = Modifier
@@ -575,14 +515,10 @@ private fun OrderCard(
                 }
             }
 
-            // Actions
             val actions = actionsFor(order.status)
             if (actions.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     actions.forEach { action ->
                         when (action) {
                             Action.ACCEPT -> Button(

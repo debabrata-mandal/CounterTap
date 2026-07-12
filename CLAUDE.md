@@ -222,6 +222,19 @@ See `PHASE8_PLAN.md` for full design. Three sub-phases:
 - [x] Business app Tables tab crash — uncaught exception in child `launch {}` coroutines caused app crash; wrapped inner launch blocks in `TablesViewModel` and `OrdersViewModel` with try-catch so tables feature fails silently (non-fatal, opt-in)
 - [x] Business app Tables tab crash — Firestore PERMISSION_DENIED because rules didn't cover `tables`/`tableSessions`; fixed by deploying updated `firestore.rules`
 - [x] `TablePickerScreen.kt` call-site updated after `pickTable` signature change (`pickTable(table)` + `onProceed()` separately)
+- [x] `OrdersViewModel` — `openSessions` wipeout bug: `listenToOrders` was creating a fresh `OrdersUiState()` on every order change, resetting sessions to `emptyList()`; fixed with `.copy()`
+- [x] `TablesRepository.settleAndCloseSession` — new method replaces `closeSession`; batch-writes all non-cancelled orders to COMPLETED + paid (both tenant + user docs); `TablesViewModel` and `TableManagementScreen` updated
+- [x] Business app `OrdersScreen` — table orders now use kitchen-only actions (Accept/Reject/Mark Ready); no per-order payment/complete buttons; Settle & Close at session level handles payment
+- [x] Customer app `CartViewModel` — removed `tableContextHolder.clear()` after order placement; table context persists for multiple rounds at same table
+- [x] Customer app `OrderTrackingScreen` — payment section checks `tableName`: if blank → cash reminder; if set → "Added to {table}'s tab" info banner (AccentBlue); paid → green confirmed banner
+- [x] `TablePickerViewModel.loadTables()` — clears `TableContextHolder` when `tenantId` changes (fresh nav = new tenant); prevents stale table context when returning to a restaurant from dashboard
+- [x] Business app `TableManagementScreen` — spacing fixes: SectionLabel top padding reduced; header bottom padding reduced; "Close Session" button replaced with "Settle & Close • ₹X" green button
+- [x] Business app `ProductListScreen` — removed double bottom padding (Scaffold FAB padding + `contentPadding` were stacking)
+
+### UX improvements (2026-07-12)
+- [x] Business app `DashboardScreen` — `MiniOrderCard` shows table/takeaway chip (TableRestaurant icon + table name, or ShoppingBag + "Takeaway"); `onNavigateToOrders` callback now passes `orderId: String`
+- [x] Business app `HomeScreen` — `focusedOrderId` state threads dashboard tap → Orders tab; `DashboardScreen` sets orderId before switching to tab 1; `OrdersScreen` receives it
+- [x] Business app `OrdersScreen` — unified single list replacing Individual/Tables sub-tabs: table sessions first (orange section header + nested `TableOrderCard`s + Settle & Close), then takeaway active orders, then completed/cancelled; `focusedOrderId` auto-scrolls to the tapped order card and highlights it with blue accent background
 
 ### Phase 8B — Hamburger Menu & Shop Settings ✅
 - [x] Business app: `ModalNavigationDrawer` in `HomeScreen` — hamburger icon in top bar; shop name + email in drawer header
@@ -299,7 +312,7 @@ For full-screen screens without bottom nav, add `statusBarsPadding()` to the top
 1. Read this file
 2. Check git log for latest commit
 3. **Active work**: Phase 8A ✅ complete; Phase 8B ✅ complete; Phase 8C (Credit Lines) is next — shell `CreditScreen` is a placeholder, full implementation pending
-4. **Known open issues**: user reported "some issue" with the 2026-07-12 build after table-picker-in-menu landed — investigate on next session
+4. **All table workflow bugs fixed (2026-07-12 session 2)**: stale context, session wipeout, per-order payment flow, customer status updates, dashboard order highlight/scroll, unified orders list
 5. **Pending post-Phase 8**: Play Store prep — Google Play Developer account ($25 one-time fee), then service account JSON for `release.yml` Play Store upload job
 6. Cloud Functions already deployed to `countertap-dev` (asia-south1)
 7. CI/CD: `release.yml` triggers on every push to main, auto-publishes APK + AAB to GitHub Releases
