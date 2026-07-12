@@ -6,9 +6,11 @@ import android.speech.tts.TextToSpeech
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.countertap.business.repository.OrderRepository
+import com.countertap.business.repository.TablesRepository
 import com.countertap.business.repository.TenantRepository
 import com.countertap.shared.Order
 import com.countertap.shared.OrderStatus
+import com.countertap.shared.TableSession
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -23,6 +25,7 @@ data class OrdersUiState(
     val isLoading: Boolean = true,
     val activeOrders: List<Order> = emptyList(),
     val doneOrders: List<Order> = emptyList(),
+    val openSessions: List<TableSession> = emptyList(),
     val error: String? = null
 )
 
@@ -44,7 +47,8 @@ class OrdersViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val auth: FirebaseAuth,
     private val tenantRepository: TenantRepository,
-    private val orderRepository: OrderRepository
+    private val orderRepository: OrderRepository,
+    private val tablesRepository: TablesRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OrdersUiState())
@@ -77,6 +81,13 @@ class OrdersViewModel @Inject constructor(
                     return@launch
                 }
                 tenantId = shop.id
+                launch {
+                    try {
+                        tablesRepository.listenToOpenSessions(shop.id).collect { sessions ->
+                            _uiState.value = _uiState.value.copy(openSessions = sessions)
+                        }
+                    } catch (_: Exception) { /* non-fatal; tables feature is opt-in */ }
+                }
                 orderRepository.listenToOrders(shop.id).collect { orders ->
                     val active = orders
                         .filter { it.status in ACTIVE_STATUSES }
@@ -145,6 +156,14 @@ class OrdersViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)
             }
+        }
+    }
+
+    fun closeSession(sessionId: String) {
+        val tid = tenantId ?: return
+        viewModelScope.launch {
+            try { tablesRepository.closeSession(tid, sessionId) }
+            catch (e: Exception) { _uiState.value = _uiState.value.copy(error = e.message) }
         }
     }
 }

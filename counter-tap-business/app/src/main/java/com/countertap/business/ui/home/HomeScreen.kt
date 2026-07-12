@@ -27,8 +27,9 @@ import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Payment
-import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.TableRestaurant
+import androidx.compose.material.icons.outlined.QrCode2
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -57,6 +58,7 @@ import com.countertap.business.ui.dashboard.DashboardScreen
 import com.countertap.business.ui.menu.ProductListScreen
 import com.countertap.business.ui.orders.OrdersScreen
 import com.countertap.business.ui.qr.QrCodeScreen
+import com.countertap.business.ui.tables.TableManagementScreen
 import com.countertap.business.ui.theme.AccentBlue
 import com.countertap.business.ui.theme.BackgroundDark
 import com.countertap.business.ui.theme.CardBackground
@@ -77,7 +79,8 @@ private val TABS = listOf(
     TabItem("Home", Icons.Default.Dashboard),
     TabItem("Orders", Icons.AutoMirrored.Filled.ReceiptLong),
     TabItem("Menu", Icons.AutoMirrored.Filled.List),
-    TabItem("QR Code", Icons.Default.QrCode)
+    TabItem("Tables", Icons.Default.TableRestaurant),
+    TabItem("QR", Icons.Outlined.QrCode2)
 )
 
 @Composable
@@ -240,7 +243,8 @@ fun HomeScreen(
                         onEditProduct = onEditProduct,
                         onManageCategories = onManageCategories
                     )
-                    3 -> QrCodeScreen()
+                    3 -> TableManagementScreen()
+                    4 -> QrCodeScreen()
                 }
             }
 
@@ -300,9 +304,10 @@ private fun PremiumNavBar(
 
             Column(
                 modifier = Modifier
+                    .weight(1f)
                     .clip(RoundedCornerShape(12.dp))
                     .clickable { onTabSelected(index) }
-                    .padding(horizontal = 20.dp, vertical = 6.dp),
+                    .padding(horizontal = 4.dp, vertical = 6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
@@ -312,9 +317,9 @@ private fun PremiumNavBar(
                         Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .background(AccentBlue.copy(alpha = 0.15f))
-                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     else
-                        Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                        Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Icon(
                         imageVector = tab.icon,

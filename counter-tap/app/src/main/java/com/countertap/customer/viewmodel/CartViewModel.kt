@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.countertap.customer.repository.ActiveOrderRepository
 import com.countertap.customer.repository.OrderRepository
 import com.countertap.customer.repository.ShopHistoryRepository
+import com.countertap.customer.repository.TablesRepository
 import com.countertap.shared.Order
 import com.countertap.shared.OrderItem
 import com.countertap.shared.OrderStatus
@@ -39,8 +40,12 @@ class CartViewModel @Inject constructor(
     private val orderRepository: OrderRepository,
     private val shopHistory: ShopHistoryRepository,
     private val activeOrderRepository: ActiveOrderRepository,
+    private val tablesRepository: TablesRepository,
+    private val tableContextHolder: TableContextHolder,
     private val auth: FirebaseAuth
 ) : ViewModel() {
+
+    val tableContext: StateFlow<TableContext?> = tableContextHolder.tableContext
 
     private val _items = MutableStateFlow<List<CartItem>>(emptyList())
     val items: StateFlow<List<CartItem>> = _items.asStateFlow()
@@ -86,6 +91,7 @@ class CartViewModel @Inject constructor(
         val user = auth.currentUser ?: return
         val items = _items.value
         if (items.isEmpty()) return
+        val tableCtx = tableContextHolder.tableContext.value
         viewModelScope.launch {
             _orderState.value = OrderState.Placing
             try {
@@ -104,12 +110,20 @@ class CartViewModel @Inject constructor(
                     totalAmount = totalAmount,
                     status = OrderStatus.PENDING,
                     paymentMethod = PaymentMethod.CASH,
-                    note = note
+                    note = note,
+                    tableSessionId = tableCtx?.sessionId ?: "",
+                    tableName = tableCtx?.tableName ?: ""
                 )
                 val orderId = orderRepository.placeOrder(tenantId, order)
+                if (tableCtx != null) {
+                    try {
+                        tablesRepository.addOrderToSession(tenantId, tableCtx.sessionId, orderId, totalAmount, user.uid)
+                    } catch (_: Exception) { /* session may have closed; order placed regardless */ }
+                }
                 val shopName = shopHistory.getRecentShops().find { it.tenantId == tenantId }?.name ?: ""
                 orderRepository.saveToUserHistory(user.uid, orderId, tenantId, shopName, order)
                 activeOrderRepository.saveActiveOrder(tenantId, orderId, shopName)
+                tableContextHolder.clear()
                 _items.value = emptyList()
                 _orderState.value = OrderState.Success(orderId)
             } catch (e: Exception) {

@@ -203,16 +203,25 @@ See `PHASE8_PLAN.md` for full design. Three sub-phases:
 - [x] App icons + splash screen — storefront (business), tea cup (customer); `androidx.core:core-splashscreen` 700ms hold
 - [ ] Play Store prep — needs Google Play Developer account ($25 one-time fee)
 
-### Phase 8A — Tables (opt-in collective billing) 🔲
-- [ ] `shared/Models.kt` — add `Table`, `TableSession` data classes; add `tableSessionId: String?` to `Order`
-- [ ] `TablesRepository` — CRUD tables, create/close sessions, addOrderToSession (batch)
-- [ ] Business app: `TableManagementScreen` — list/add/delete tables; empty state explains opt-in nature
-- [ ] Business app: Orders tab gets Individual / Tables sub-tabs; table session cards with close + pay actions
-- [ ] Business app bottom nav: add Tables tab (Dashboard | Orders | Menu | Tables | QR)
-- [ ] Customer app: `TablePickerScreen` — shown after QR scan only if tenant has ≥ 1 table; Takeaway always available
-- [ ] Customer app: `ScannerViewModel` fetches tables count post-scan; routes to picker or menu directly
-- [ ] Customer app: `CartViewModel.placeOrder` passes `tableSessionId`; calls `addOrderToSession` after order created
-- [ ] Customer app: Menu + Cart headers show table name when in a session
+### Phase 8A — Tables (opt-in collective billing) ✅
+- [x] `shared/Models.kt` — added `Table`, `TableSession`, `TableSessionStatus`; added `tableSessionId` + `tableName` to `Order`
+- [x] `TablesRepository` (business + customer) — CRUD tables, create/close sessions, addOrderToSession (FieldValue.arrayUnion + increment)
+- [x] Business app: `TableManagementScreen` — list/add/delete tables; session cards with close; empty state
+- [x] Business app: Orders tab gets Individual / Tables sub-tabs (auto-shown when table orders exist)
+- [x] Business app bottom nav: Tables tab (Dashboard | Orders | Menu | Tables | QR)
+- [x] Customer app: `TableContextHolder` singleton + `TablePickerViewModel` — fetches tables, creates/joins session
+- [x] Customer app: `CartViewModel.placeOrder` embeds `tableSessionId`/`tableName`; calls `addOrderToSession`; clears context after
+- [x] Customer app: Cart header shows table name chip when in a table session
+- [x] Customer app: **Table selector chip in `MenuScreen` header** — visible when shop has tables; shows "Takeaway" or selected table name; tappable to reselect
+- [x] Customer app: `TablePickerBottomSheet` in `MenuScreen` — Takeaway option + scrollable table list; "Selected" badge on current choice; creates/joins Firestore session on pick
+- [x] `TablePickerViewModel.pickTable(table: Table)` — simplified signature; `tenantId` stored internally from `loadTables()` call
+- [x] Firestore rules — added `tables/{tableId}` (read: auth, write: owner) + `tableSessions/{sessionId}` (read/create/update: auth, delete: never) inside `tenants/{tenantId}`
+
+### Bug fixes & polish (2026-07-12)
+- [x] Business app: QR tab label was wrapping ("QR\nCod\ne") with 5 tabs — label shortened to "QR", icon changed to `Icons.Outlined.QrCode2`, tab columns use `Modifier.weight(1f)` + `padding(horizontal = 4.dp)`, pill padding reduced to `horizontal = 8.dp`
+- [x] Business app Tables tab crash — uncaught exception in child `launch {}` coroutines caused app crash; wrapped inner launch blocks in `TablesViewModel` and `OrdersViewModel` with try-catch so tables feature fails silently (non-fatal, opt-in)
+- [x] Business app Tables tab crash — Firestore PERMISSION_DENIED because rules didn't cover `tables`/`tableSessions`; fixed by deploying updated `firestore.rules`
+- [x] `TablePickerScreen.kt` call-site updated after `pickTable` signature change (`pickTable(table)` + `onProceed()` separately)
 
 ### Phase 8B — Hamburger Menu & Shop Settings ✅
 - [x] Business app: `ModalNavigationDrawer` in `HomeScreen` — hamburger icon in top bar; shop name + email in drawer header
@@ -237,7 +246,7 @@ See `PHASE8_PLAN.md` for full design. Three sub-phases:
 ## Key Decisions Made (Phase 8)
 
 16. **Tables are opt-in via presence** — 0 tables in Firestore = feature invisible to customers; works for all business types (restaurants, medicine shops, retail). No toggle needed.
-17. **Table picker gating** — `ScannerViewModel` fetches `tables` count after QR decode; navigates to `TablePickerScreen` only if count ≥ 1, else straight to `MENU/{tenantId}`.
+17. **Table selection is in-menu, not post-scan** — Scanner always navigates straight to `MENU/{tenantId}`; no per-table QR codes. Customers choose Takeaway or a table from a chip in the `MenuScreen` header (visible only when the shop has ≥ 1 table). `TablePickerViewModel.loadTables()` is called inside `MenuScreen` via `LaunchedEffect`; `pickTable(table)` creates/joins a Firestore session and updates `TableContextHolder`. `TablePickerScreen.kt` still compiles but is not in the nav graph.
 18. **Hamburger menu** — `ModalNavigationDrawer` in business `HomeScreen`; edit screens reuse onboarding composables with an `isEditMode: Boolean` nav arg. No separate `SettingsRepository` needed — `TenantViewModel.updateShop()` writes directly via existing `TenantRepository.updateTenant()`.
 19. **Credit mirroring** — every credit mutation batch-writes to both `tenants/{tenantId}/creditLines/{uid}` and `users/{uid}/creditLines/{tenantId}` to keep both apps in sync.
 20. **No partial payments** — an order is fully cash or fully credit; no split payment.
@@ -289,7 +298,8 @@ For full-screen screens without bottom nav, add `statusBarsPadding()` to the top
 
 1. Read this file
 2. Check git log for latest commit
-3. **Active work**: Phase 8A (Tables) is next — Phase 8B (Hamburger Menu) is complete; Phase 8C (Credit Lines) shell is in place
-4. **Pending post-Phase 8**: Play Store prep — Google Play Developer account ($25 one-time fee), then service account JSON for `release.yml` Play Store upload job
-5. Cloud Functions already deployed to `countertap-dev` (asia-south1)
-6. CI/CD: `release.yml` triggers on every push to main, auto-publishes APK + AAB to GitHub Releases
+3. **Active work**: Phase 8A ✅ complete; Phase 8B ✅ complete; Phase 8C (Credit Lines) is next — shell `CreditScreen` is a placeholder, full implementation pending
+4. **Known open issues**: user reported "some issue" with the 2026-07-12 build after table-picker-in-menu landed — investigate on next session
+5. **Pending post-Phase 8**: Play Store prep — Google Play Developer account ($25 one-time fee), then service account JSON for `release.yml` Play Store upload job
+6. Cloud Functions already deployed to `countertap-dev` (asia-south1)
+7. CI/CD: `release.yml` triggers on every push to main, auto-publishes APK + AAB to GitHub Releases

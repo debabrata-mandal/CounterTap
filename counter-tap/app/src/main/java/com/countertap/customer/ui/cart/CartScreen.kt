@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.TableRestaurant
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -66,6 +67,7 @@ fun CartScreen(
 ) {
     val items by viewModel.items.collectAsState()
     val orderState by viewModel.orderState.collectAsState()
+    val tableContext by viewModel.tableContext.collectAsState()
     var note by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(orderState) {
@@ -93,7 +95,21 @@ fun CartScreen(
             }
             Column {
                 Text("Your Cart", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                if (items.isNotEmpty()) {
+                if (tableContext != null) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 2.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.TableRestaurant,
+                            contentDescription = null,
+                            tint = AccentBlue,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        androidx.compose.foundation.layout.Spacer(Modifier.size(4.dp))
+                        Text(tableContext!!.tableName, fontSize = 12.sp, color = AccentBlue)
+                    }
+                } else if (items.isNotEmpty()) {
                     Text(
                         "${items.size} item${if (items.size > 1) "s" else ""}",
                         fontSize = 12.sp,

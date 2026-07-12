@@ -53,6 +53,8 @@ data class Order(
     val paymentMethod: String = PaymentMethod.CASH,
     val upiTransactionId: String = "",
     val note: String = "",
+    val tableSessionId: String = "",
+    val tableName: String = "",
     @ServerTimestamp val createdAt: Date? = null
 )
 
@@ -82,6 +84,31 @@ object OrderStatus {
     const val COMPLETED = "COMPLETED"
     const val CANCELLED = "CANCELLED"
 }
+
+data class Table(
+    @DocumentId val id: String = "",
+    val name: String = "",
+    @ServerTimestamp val createdAt: Date? = null
+)
+
+object TableSessionStatus {
+    const val OPEN = "open"
+    const val CLOSED = "closed"
+}
+
+data class TableSession(
+    @DocumentId val id: String = "",
+    val tableId: String = "",
+    val tableName: String = "",
+    val status: String = TableSessionStatus.OPEN,
+    @ServerTimestamp val openedAt: Date? = null,
+    val closedAt: Date? = null,
+    val orderIds: List<String> = emptyList(),
+    val customerIds: List<String> = emptyList(),
+    val totalAmount: Double = 0.0,
+    val paymentStatus: String = PaymentStatus.UNPAID,
+    val paidVia: String = ""
+)
 
 data class Shop(
     @DocumentId val id: String = "",

@@ -22,10 +22,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.TableRestaurant
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -41,6 +44,7 @@ import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -67,9 +71,12 @@ import com.countertap.customer.ui.theme.TextSecondary
 import com.countertap.customer.ui.theme.WarningOrange
 import com.countertap.customer.viewmodel.CartViewModel
 import com.countertap.customer.viewmodel.MenuViewModel
+import com.countertap.customer.viewmodel.TablePickerState
+import com.countertap.customer.viewmodel.TablePickerViewModel
 import com.countertap.shared.OptionGroup
 import com.countertap.shared.Product
 import com.countertap.shared.SelectedOption
+import com.countertap.shared.Table
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -79,19 +86,47 @@ fun MenuScreen(
     onGoToCart: () -> Unit,
     onChangeRestaurant: () -> Unit = {},
     menuViewModel: MenuViewModel = hiltViewModel(),
-    cartViewModel: CartViewModel = hiltViewModel()
+    cartViewModel: CartViewModel = hiltViewModel(),
+    tablePickerViewModel: TablePickerViewModel = hiltViewModel()
 ) {
     val uiState by menuViewModel.uiState.collectAsState()
     val cartItems by cartViewModel.items.collectAsState()
+    val tableContext by cartViewModel.tableContext.collectAsState()
+    val pickerState by tablePickerViewModel.state.collectAsState()
     val isShopOpen = uiState.shop?.active ?: true
     val cartCount = if (isShopOpen) cartItems.sumOf { it.quantity } else 0
     val cartTotal = cartItems.sumOf { it.unitPrice * it.quantity }
 
     var pickerProduct by remember { mutableStateOf<Product?>(null) }
+    var showTableSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val tableSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(tenantId) { menuViewModel.loadShop(tenantId) }
+    LaunchedEffect(tenantId) {
+        menuViewModel.loadShop(tenantId)
+        tablePickerViewModel.loadTables(tenantId)
+    }
+
+    if (showTableSheet) {
+        val tables = (pickerState as? TablePickerState.Ready)?.tables ?: emptyList()
+        TablePickerBottomSheet(
+            sheetState = tableSheetState,
+            tables = tables,
+            currentContext = tableContext,
+            onDismiss = {
+                scope.launch { tableSheetState.hide() }.invokeOnCompletion { showTableSheet = false }
+            },
+            onPickTakeaway = {
+                tablePickerViewModel.pickTakeaway()
+                scope.launch { tableSheetState.hide() }.invokeOnCompletion { showTableSheet = false }
+            },
+            onPickTable = { table ->
+                tablePickerViewModel.pickTable(table)
+                scope.launch { tableSheetState.hide() }.invokeOnCompletion { showTableSheet = false }
+            }
+        )
+    }
 
     if (pickerProduct != null) {
         OptionPickerSheet(
@@ -131,6 +166,39 @@ fun MenuScreen(
                             fontSize = 13.sp,
                             color = TextSecondary
                         )
+                    }
+                    val hasTables = pickerState is TablePickerState.Ready &&
+                        (pickerState as TablePickerState.Ready).tables.isNotEmpty()
+                    if (hasTables || tableContext != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(CardElevated)
+                                .clickable { showTableSheet = true }
+                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.TableRestaurant,
+                                contentDescription = null,
+                                tint = AccentBlue,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = tableContext?.tableName?.ifBlank { "Takeaway" } ?: "Takeaway",
+                                fontSize = 12.sp,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Icon(
+                                Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                                tint = TextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
                 IconButton(onClick = onChangeRestaurant) {
@@ -464,6 +532,131 @@ private fun CategoryHeader(name: String) {
             color = AccentBlue,
             letterSpacing = 1.5.sp
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TablePickerBottomSheet(
+    sheetState: SheetState,
+    tables: List<Table>,
+    currentContext: com.countertap.customer.viewmodel.TableContext?,
+    onDismiss: () -> Unit,
+    onPickTakeaway: () -> Unit,
+    onPickTable: (Table) -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = SurfaceColor
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .navigationBarsPadding()
+        ) {
+            Text(
+                "Choose your spot",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            Text(
+                "Orders will be tracked under your selection",
+                fontSize = 13.sp,
+                color = TextSecondary
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Takeaway option
+            val isTakeaway = currentContext == null || currentContext.tableId.isEmpty()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isTakeaway) AccentBlue.copy(alpha = 0.12f) else CardBackground)
+                    .clickable { onPickTakeaway() }
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    Icons.Default.ShoppingBag,
+                    contentDescription = null,
+                    tint = if (isTakeaway) AccentBlue else TextSecondary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Takeaway", fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                        color = if (isTakeaway) AccentBlue else TextPrimary)
+                    Text("Pick up at counter", fontSize = 12.sp, color = TextSecondary)
+                }
+                if (isTakeaway) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(AccentBlue.copy(alpha = 0.2f))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text("Selected", fontSize = 11.sp, color = AccentBlue, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            if (tables.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(color = CardElevated)
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    "Tables",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextSecondary,
+                    letterSpacing = 1.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                tables.forEach { table ->
+                    val isSelected = currentContext?.tableId == table.id
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isSelected) AccentBlue.copy(alpha = 0.12f) else CardBackground)
+                            .clickable { onPickTable(table) }
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.TableRestaurant,
+                            contentDescription = null,
+                            tint = if (isSelected) AccentBlue else TextSecondary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Text(
+                            table.name,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isSelected) AccentBlue else TextPrimary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (isSelected) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(AccentBlue.copy(alpha = 0.2f))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text("Selected", fontSize = 11.sp, color = AccentBlue, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
     }
 }
 

@@ -1,6 +1,7 @@
 package com.countertap.business.ui.orders
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,15 +19,21 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.TableRestaurant
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,90 +53,232 @@ import com.countertap.business.ui.theme.TextHint
 import com.countertap.business.ui.theme.TextPrimary
 import com.countertap.business.ui.theme.TextSecondary
 import com.countertap.business.ui.theme.WarningOrange
+import com.countertap.business.viewmodel.OrdersUiState
 import com.countertap.business.viewmodel.OrdersViewModel
 import com.countertap.shared.Order
 import com.countertap.shared.OrderStatus
+import com.countertap.shared.TableSession
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 @Composable
 fun OrdersScreen(viewModel: OrdersViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsState()
+    val hasTables = uiState.openSessions.isNotEmpty() ||
+            uiState.activeOrders.any { it.tableSessionId.isNotEmpty() }
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundDark)
     ) {
-        Text(
-            "Orders",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextPrimary,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = if (hasTables) 4.dp else 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Orders", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+        }
+
+        // Sub-tabs — only shown when table orders exist
+        if (hasTables) {
+            OrdersSubTabs(selectedTab = selectedTab, onTabSelected = { selectedTab = it })
+        }
 
         when {
             uiState.isLoading -> Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = AccentBlue)
-            }
+            ) { CircularProgressIndicator(color = AccentBlue) }
 
             uiState.error != null -> Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
-            ) {
-                Text(uiState.error!!, color = TextSecondary, fontSize = 14.sp)
-            }
+            ) { Text(uiState.error!!, color = TextSecondary, fontSize = 14.sp) }
 
-            uiState.activeOrders.isEmpty() && uiState.doneOrders.isEmpty() -> Box(
-                modifier = Modifier.fillMaxSize(),
+            else -> if (hasTables && selectedTab == 1) {
+                TableSessionsTab(uiState, viewModel)
+            } else {
+                IndividualOrdersTab(uiState, viewModel)
+            }
+        }
+    }
+}
+
+@Composable
+private fun OrdersSubTabs(selectedTab: Int, onTabSelected: (Int) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(CardBackground)
+            .padding(4.dp)
+    ) {
+        listOf("Individual", "Tables").forEachIndexed { index, label ->
+            val isSelected = index == selectedTab
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(if (isSelected) AccentBlue.copy(alpha = 0.2f) else Color.Transparent)
+                    .clickable { onTabSelected(index) }
+                    .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("No orders yet", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text("New orders will appear here in real time", fontSize = 14.sp, color = TextSecondary)
-                }
+                Text(
+                    label,
+                    fontSize = 13.sp,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                    color = if (isSelected) AccentBlue else TextSecondary
+                )
             }
+        }
+    }
+}
 
-            else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
-                if (uiState.activeOrders.isNotEmpty()) {
-                    item {
-                        SectionHeader("ACTIVE", uiState.activeOrders.size)
-                    }
-                    items(uiState.activeOrders, key = { it.id }) { order ->
-                        OrderCard(
-                            order = order,
-                            onAccept = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.CONFIRMED) },
-                            onReject = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.CANCELLED) },
-                            onReady = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.READY) },
-                            onComplete = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.COMPLETED) },
-                            onMarkPaid = { viewModel.markAsPaid(order.id) }
-                        )
-                    }
-                }
+@Composable
+private fun IndividualOrdersTab(uiState: OrdersUiState, viewModel: OrdersViewModel) {
+    val activeOrders = uiState.activeOrders.filter { it.tableSessionId.isEmpty() }
+    val doneOrders = uiState.doneOrders.filter { it.tableSessionId.isEmpty() }
+    // Fall back to all orders if no table sessions exist (shops without tables)
+    val showActive = if (uiState.openSessions.isEmpty() && uiState.activeOrders.none { it.tableSessionId.isNotEmpty() })
+        uiState.activeOrders else activeOrders
+    val showDone = if (uiState.openSessions.isEmpty() && uiState.activeOrders.none { it.tableSessionId.isNotEmpty() })
+        uiState.doneOrders else doneOrders
 
-                if (uiState.doneOrders.isNotEmpty()) {
-                    item {
-                        SectionHeader("COMPLETED / CANCELLED", uiState.doneOrders.size)
-                    }
-                    items(uiState.doneOrders, key = { it.id }) { order ->
-                        OrderCard(
-                            order = order,
-                            onAccept = {},
-                            onReject = {},
-                            onReady = {},
-                            onComplete = {},
-                            onMarkPaid = {}
-                        )
-                    }
-                }
-
-                item { Spacer(modifier = Modifier.height(80.dp)) }
+    if (showActive.isEmpty() && showDone.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("No orders yet", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                Spacer(Modifier.height(6.dp))
+                Text("New orders will appear here in real time", fontSize = 14.sp, color = TextSecondary)
             }
+        }
+        return
+    }
+
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        if (showActive.isNotEmpty()) {
+            item { SectionHeader("ACTIVE", showActive.size) }
+            items(showActive, key = { it.id }) { order ->
+                OrderCard(
+                    order = order,
+                    onAccept = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.CONFIRMED) },
+                    onReject = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.CANCELLED) },
+                    onReady = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.READY) },
+                    onComplete = { viewModel.updateStatus(order.id, order.customerId, OrderStatus.COMPLETED) },
+                    onMarkPaid = { viewModel.markAsPaid(order.id) }
+                )
+            }
+        }
+        if (showDone.isNotEmpty()) {
+            item { SectionHeader("COMPLETED / CANCELLED", showDone.size) }
+            items(showDone, key = { it.id }) { order ->
+                OrderCard(order = order, onAccept = {}, onReject = {}, onReady = {}, onComplete = {}, onMarkPaid = {})
+            }
+        }
+        item { Spacer(Modifier.height(80.dp)) }
+    }
+}
+
+@Composable
+private fun TableSessionsTab(uiState: OrdersUiState, viewModel: OrdersViewModel) {
+    if (uiState.openSessions.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Default.TableRestaurant, contentDescription = null, tint = TextHint, modifier = Modifier.size(56.dp))
+                Spacer(Modifier.height(12.dp))
+                Text("No active table sessions", fontSize = 16.sp, color = TextSecondary)
+            }
+        }
+        return
+    }
+
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        item { SectionHeader("ACTIVE SESSIONS", uiState.openSessions.size) }
+        items(uiState.openSessions, key = { it.id }) { session ->
+            val sessionOrders = uiState.activeOrders.filter { it.tableSessionId == session.id }
+            TableSessionCard(
+                session = session,
+                orders = sessionOrders,
+                onCloseSession = { viewModel.closeSession(session.id) },
+                onAccept = { order -> viewModel.updateStatus(order.id, order.customerId, OrderStatus.CONFIRMED) },
+                onReject = { order -> viewModel.updateStatus(order.id, order.customerId, OrderStatus.CANCELLED) },
+                onReady = { order -> viewModel.updateStatus(order.id, order.customerId, OrderStatus.READY) },
+                onComplete = { order -> viewModel.updateStatus(order.id, order.customerId, OrderStatus.COMPLETED) },
+                onMarkPaid = { order -> viewModel.markAsPaid(order.id) }
+            )
+        }
+        item { Spacer(Modifier.height(80.dp)) }
+    }
+}
+
+@Composable
+private fun TableSessionCard(
+    session: TableSession,
+    orders: List<Order>,
+    onCloseSession: () -> Unit,
+    onAccept: (Order) -> Unit,
+    onReject: (Order) -> Unit,
+    onReady: (Order) -> Unit,
+    onComplete: (Order) -> Unit,
+    onMarkPaid: (Order) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 5.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(CardBackground)
+    ) {
+        // Session header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(AccentBlue.copy(alpha = 0.1f))
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.TableRestaurant, contentDescription = null, tint = AccentBlue, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(session.tableName, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            }
+            Text("₹${session.totalAmount.toInt()}", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AccentBlue)
+        }
+
+        // Orders in session
+        orders.forEach { order ->
+            HorizontalDivider(color = DividerColor)
+            OrderCard(
+                order = order,
+                onAccept = { onAccept(order) },
+                onReject = { onReject(order) },
+                onReady = { onReady(order) },
+                onComplete = { onComplete(order) },
+                onMarkPaid = { onMarkPaid(order) }
+            )
+        }
+
+        if (orders.isEmpty()) {
+            HorizontalDivider(color = DividerColor)
+            Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                Text("No active orders for this table", fontSize = 13.sp, color = TextHint)
+            }
+        }
+
+        // Close session
+        OutlinedButton(
+            onClick = onCloseSession,
+            modifier = Modifier.fillMaxWidth().padding(12.dp).height(36.dp),
+            shape = RoundedCornerShape(8.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, DividerColor)
+        ) {
+            Text("Close Session", fontSize = 13.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
         }
     }
 }
