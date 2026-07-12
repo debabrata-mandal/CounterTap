@@ -62,11 +62,13 @@ Shared data models are in `shared/src/main/java/com/countertap/shared/Models.kt`
 
 ## Current Phase
 
-**Phase 8 — Tables, Hamburger Menu & Credit Lines (IN PROGRESS)**
-See `PHASE8_PLAN.md` for full design. Three sub-phases:
+**Phase 8 — Tables, Hamburger Menu & Credit Lines ✅ COMPLETE**
+All three sub-phases shipped in branch `feature/credite-line` (PR open against main):
 - **8A** — Tables (opt-in collective billing; invisible to shops with no tables)
 - **8B** — Hamburger menu in business app: edit shop details, edit UPI, access credit lines
 - **8C** — Credit lines: customer requests credit, owner approves with limit, cart charges to credit
+
+**App version bumped to 2.0 (versionCode 2)** for both apps.
 
 ## Completed Work
 
@@ -246,15 +248,29 @@ See `PHASE8_PLAN.md` for full design. Three sub-phases:
 - [x] `Routes.kt` — added `EDIT_SHOP`, `EDIT_UPI`, `CREDIT_LINES`
 - [x] `AppNavGraph.kt` — wired all three new routes; sign-out via `AuthViewModel.signOut()` clears full back stack
 
-### Phase 8C — Credit Lines 🔲
-- [ ] `shared/Models.kt` — add `CreditLine` data class; `PaymentMethod.CREDIT = "credit"` constant
-- [ ] `CreditRepository` (customer) — `requestCredit`, `listenToCreditLine`, `applyOrderToCredit`
-- [ ] Customer app: "Request Credit" button in menu header (hidden if line exists)
-- [ ] Customer app: credit status chip in menu header (pending / active with balance)
-- [ ] Customer app: Cart payment toggle — Cash at counter | Charge to Credit (shown only if active line)
-- [ ] `CreditRepository` (business) — `listenToCreditLines`, `approveCredit`, `rejectCredit`, `markSettled`
-- [ ] Business app: `CreditScreen` fully wired — pending requests (approve/reject), active lines (balance/limit, settle)
-- [ ] Business app: table close payment dialog — Cash | Credit (credit dropdown shows eligible customers)
+### Phase 8C — Credit Lines ✅
+- [x] `shared/Models.kt` — added `CreditLine` data class, `CreditLineStatus` object (PENDING/ACTIVE/REJECTED), `PaymentMethod.CREDIT = "credit"`
+- [x] Customer `CreditRepository` — `requestCredit`, `listenToCreditLine`, `applyOrderToCredit`; batch-writes to both tenant + user paths
+- [x] Business `CreditRepository` — `listenToCreditLines`, `approveCredit` (with limit), `rejectCredit`, `markSettled` (resets balance)
+- [x] Business `CreditViewModel` — splits lines into pendingLines / activeLines; loads tenant via `TenantRepository.getTenantByOwnerId`
+- [x] Business `CreditScreen` — pending cards (Reject + Approve with limit dialog), active cards (balance progress bar, Settle button), empty state
+- [x] Customer `CartViewModel` — `loadCreditLine(tenantId)` listener, `requestCredit`, `setPaymentMethod`; credit orders set `paymentStatus=PAID` and call `applyOrderToCredit` after placement
+- [x] Customer `MenuScreen` header redesigned — chips moved to a dedicated `CardElevated` context bar row below shop name; table chip left, credit chip right; alpha 0.12→0.22, text 11sp→13sp SemiBold
+- [x] Customer `CartScreen` — Cash | Credit payment toggle shown when active credit line; credit option shows remaining balance or "Limit exceeded"; Place Order button turns green for credit
+- [x] `firestore.rules` — `creditLines/{customerId}` rules in tenant; `creditLines/{tenantId}` rules in user; order `create` rule allows `paymentStatus=paid` when `paymentMethod=credit`
+- [x] Table description field — `Table.description: String`; business `TableManagementScreen` add/edit dialogs include description; customer `TablePickerBottomSheet` shows description as subtitle
+
+### Work done (2026-07-13) ✅
+
+#### MenuScreen header redesign
+- [x] Header refactored from a flat `Row` to a `Column` with two sections: shop info row + context chips row
+- [x] Context chips row has `CardElevated` background, `padding(16.dp, 10.dp)` — chips no longer crammed inside the shop name column
+- [x] Table chip: `AccentBlue.copy(alpha=0.22f)` background, AccentBlue text 13sp SemiBold (was CardElevated bg, TextPrimary 12sp Medium — near-zero contrast)
+- [x] Credit chips: alpha 0.12→0.22, text 11sp→13sp SemiBold; "Apply for credit" uses `CardBackground` on `CardElevated` for real contrast
+- [x] Table chip left / credit chip right with `Spacer(weight(1f))`; credit chip left-aligned when no tables present
+
+#### Version bump
+- [x] Both apps bumped from `1.0 (versionCode 1)` → `2.0 (versionCode 2)`
 
 ## Key Decisions Made (Phase 8)
 
@@ -311,8 +327,8 @@ For full-screen screens without bottom nav, add `statusBarsPadding()` to the top
 
 1. Read this file
 2. Check git log for latest commit
-3. **Active work**: Phase 8A ✅ complete; Phase 8B ✅ complete; Phase 8C (Credit Lines) is next — shell `CreditScreen` is a placeholder, full implementation pending
-4. **All table workflow bugs fixed (2026-07-12 session 2)**: stale context, session wipeout, per-order payment flow, customer status updates, dashboard order highlight/scroll, unified orders list
+3. **Active work**: Phase 8 fully complete (8A + 8B + 8C). PR open: `feature/credite-line` → `main`. Both apps at v2.0.
+4. **Firestore rules** must be deployed before credit lines work: `firebase deploy --only firestore:rules`
 5. **Pending post-Phase 8**: Play Store prep — Google Play Developer account ($25 one-time fee), then service account JSON for `release.yml` Play Store upload job
 6. Cloud Functions already deployed to `countertap-dev` (asia-south1)
 7. CI/CD: `release.yml` triggers on every push to main, auto-publishes APK + AAB to GitHub Releases
