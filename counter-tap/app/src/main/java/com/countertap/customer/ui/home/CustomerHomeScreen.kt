@@ -22,17 +22,27 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,8 +65,11 @@ import com.countertap.customer.ui.theme.TextPrimary
 import com.countertap.customer.ui.theme.TextSecondary
 import com.countertap.customer.ui.theme.WarningOrange
 import com.countertap.customer.viewmodel.ActiveOrderInfo
+import com.countertap.customer.viewmodel.AuthViewModel
 import com.countertap.customer.viewmodel.CustomerHomeViewModel
 import com.countertap.shared.OrderStatus
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.launch
 
 @Composable
 fun CustomerHomeScreen(
@@ -64,11 +77,74 @@ fun CustomerHomeScreen(
     onScanNew: () -> Unit,
     onViewHistory: () -> Unit,
     onTrackOrder: (tenantId: String, orderId: String) -> Unit,
-    viewModel: CustomerHomeViewModel = hiltViewModel()
+    onCreditLines: () -> Unit = {},
+    viewModel: CustomerHomeViewModel = hiltViewModel(),
+    authViewModel: AuthViewModel = hiltViewModel()
 ) {
     LaunchedEffect(Unit) { viewModel.refresh() }
     val state by viewModel.state.collectAsState()
+    val drawerState = rememberDrawerState(androidx.compose.material3.DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    val currentUser = FirebaseAuth.getInstance().currentUser
 
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet(
+                drawerContainerColor = CardBackground
+            ) {
+                // Drawer header
+                Column(
+                    modifier = Modifier.fillMaxWidth().background(BackgroundDark)
+                        .padding(horizontal = 20.dp, vertical = 24.dp)
+                ) {
+                    Box(
+                        modifier = Modifier.size(52.dp).clip(CircleShape)
+                            .background(AccentBlue.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            (currentUser?.displayName?.firstOrNull() ?: "U").toString().uppercase(),
+                            fontSize = 22.sp, fontWeight = FontWeight.Bold, color = AccentBlue
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        currentUser?.displayName ?: "User",
+                        fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary
+                    )
+                    if (currentUser?.email != null) {
+                        Text(currentUser.email!!, fontSize = 12.sp, color = TextSecondary)
+                    }
+                }
+                HorizontalDivider(color = DividerColor)
+                Spacer(Modifier.height(8.dp))
+
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.AccountBalance, contentDescription = null, tint = AccentBlue) },
+                    label = { Text("My Credit Lines", color = TextPrimary) },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onCreditLines()
+                    },
+                    colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent)
+                )
+
+                Spacer(Modifier.weight(1f))
+                HorizontalDivider(color = DividerColor)
+
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, tint = ErrorRed) },
+                    label = { Text("Sign Out", color = ErrorRed) },
+                    selected = false,
+                    onClick = { authViewModel.signOut() },
+                    colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent)
+                )
+                Spacer(Modifier.height(16.dp))
+            }
+        }
+    ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -85,11 +161,14 @@ fun CustomerHomeScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 20.dp),
+                            .padding(start = 4.dp, end = 4.dp, top = 16.dp, bottom = 8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = TextPrimary, modifier = Modifier.size(24.dp))
+                        }
+                        Column(modifier = Modifier.weight(1f).padding(horizontal = 8.dp)) {
                             val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
                             val greeting = when {
                                 hour < 12 -> "Good morning"
@@ -97,10 +176,9 @@ fun CustomerHomeScreen(
                                 else -> "Good evening"
                             }
                             Text(greeting, fontSize = 12.sp, color = TextSecondary)
-                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 state.userName.ifBlank { "Welcome" },
-                                fontSize = 22.sp,
+                                fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary
                             )
@@ -242,6 +320,7 @@ fun CustomerHomeScreen(
             onScan = onScanNew
         )
     }
+    } // end ModalNavigationDrawer content
 }
 
 @Composable

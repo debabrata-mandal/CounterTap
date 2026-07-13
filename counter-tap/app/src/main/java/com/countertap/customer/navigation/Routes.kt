@@ -9,6 +9,7 @@ object Routes {
     const val CART = "cart/{tenantId}"
     const val ORDER_TRACKING = "order_tracking/{tenantId}/{orderId}"
     const val ORDER_HISTORY = "order_history"
+    const val CUSTOMER_CREDIT_LINES = "customer_credit_lines"
 
     fun tablePicker(tenantId: String) = "table_picker/$tenantId"
     fun menu(tenantId: String) = "menu/$tenantId"

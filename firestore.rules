@@ -81,7 +81,11 @@ service cloud.firestore {
         allow read:   if isOwner(tenantId) ||
           (request.auth != null && request.auth.uid == customerId);
         allow create: if request.auth != null && request.auth.uid == customerId;
-        allow update: if isOwner(tenantId);
+        // Owner can update anything; customer can only update pendingLimitIncrease
+        allow update: if isOwner(tenantId) ||
+          (request.auth != null && request.auth.uid == customerId &&
+           request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['pendingLimitIncrease']));
         allow delete: if isOwner(tenantId);
       }
     }
@@ -114,10 +118,10 @@ service cloud.firestore {
       match /creditLines/{tenantId} {
         allow read:   if request.auth != null && request.auth.uid == userId;
         allow create: if request.auth != null && request.auth.uid == userId;
-        // Owner updates status/limit/balance; restrict to relevant fields
+        // Owner updates status/limit/balance; customer updates pendingLimitIncrease
         allow update: if request.auth != null &&
           request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['status', 'limit', 'balance', 'approvedAt']);
+            .hasOnly(['status', 'limit', 'balance', 'approvedAt', 'pendingLimitIncrease']);
         allow delete: if false;
       }
     }

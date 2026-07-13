@@ -85,6 +85,7 @@ data class CreditLine(
     val limit: Double = 0.0,
     val balance: Double = 0.0,
     val status: String = CreditLineStatus.PENDING,
+    val pendingLimitIncrease: Double = 0.0,
     @ServerTimestamp val requestedAt: Date? = null,
     val approvedAt: Date? = null
 )

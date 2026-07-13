@@ -10,6 +10,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.countertap.customer.ui.auth.SignInScreen
 import com.countertap.customer.ui.cart.CartScreen
+import com.countertap.customer.ui.credit.CustomerCreditLinesScreen
 import com.countertap.customer.ui.home.CustomerHomeScreen
 import com.countertap.customer.ui.menu.MenuScreen
 import com.countertap.customer.ui.order.OrderTrackingScreen
@@ -36,7 +37,6 @@ fun AppNavGraph(startDestination: String) {
         composable(Routes.HOME) {
             CustomerHomeScreen(
                 onOpenMenu = { tenantId ->
-                    // Navigate directly to menu for recent restaurants (no table picker)
                     navController.navigate(Routes.menu(tenantId))
                 },
                 onScanNew = {
@@ -47,7 +47,16 @@ fun AppNavGraph(startDestination: String) {
                 },
                 onTrackOrder = { tenantId, orderId ->
                     navController.navigate(Routes.orderTracking(tenantId, orderId))
+                },
+                onCreditLines = {
+                    navController.navigate(Routes.CUSTOMER_CREDIT_LINES)
                 }
+            )
+        }
+
+        composable(Routes.CUSTOMER_CREDIT_LINES) {
+            CustomerCreditLinesScreen(
+                onBack = { navController.popBackStack() }
             )
         }
 
