@@ -37,6 +37,18 @@ class CreditRepository @Inject constructor(
         }
     }
 
+    fun listenToAllCreditLines(): Flow<List<CreditLine>> {
+        val uid = auth.currentUser?.uid ?: return flowOf(emptyList())
+        return callbackFlow {
+            val listener = firestore.collection("users").document(uid)
+                .collection("creditLines").addSnapshotListener { snap, err ->
+                    if (err != null) { close(err); return@addSnapshotListener }
+                    trySend(snap?.toObjects(CreditLine::class.java) ?: emptyList())
+                }
+            awaitClose { listener.remove() }
+        }
+    }
+
     suspend fun requestCredit(tenantId: String, shopName: String) {
         val user = auth.currentUser ?: return
         val creditLine = CreditLine(
@@ -50,6 +62,15 @@ class CreditRepository @Inject constructor(
         val batch = firestore.batch()
         batch.set(tenantCreditRef(tenantId, user.uid), creditLine)
         batch.set(userCreditRef(user.uid, tenantId), creditLine)
+        batch.commit().await()
+    }
+
+    suspend fun requestLimitIncrease(tenantId: String, amount: Double) {
+        val uid = auth.currentUser?.uid ?: return
+        val updates = mapOf("pendingLimitIncrease" to amount)
+        val batch = firestore.batch()
+        batch.update(tenantCreditRef(tenantId, uid), updates)
+        batch.update(userCreditRef(uid, tenantId), updates)
         batch.commit().await()
     }
 

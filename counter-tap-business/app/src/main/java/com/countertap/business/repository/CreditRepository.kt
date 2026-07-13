@@ -52,11 +52,38 @@ class CreditRepository @Inject constructor(
         batch.commit().await()
     }
 
-    suspend fun markSettled(tenantId: String, customerId: String, amount: Double) {
-        val decrement = FieldValue.increment(-amount)
+    suspend fun markSettled(tenantId: String, customerId: String) {
+        val updates = mapOf("balance" to 0.0)
         val batch = firestore.batch()
-        batch.update(tenantCreditsRef(tenantId).document(customerId), mapOf("balance" to decrement))
-        batch.update(userCreditRef(customerId, tenantId), mapOf("balance" to decrement))
+        batch.update(tenantCreditsRef(tenantId).document(customerId), updates)
+        batch.update(userCreditRef(customerId, tenantId), updates)
+        batch.commit().await()
+    }
+
+    suspend fun updateLimit(tenantId: String, customerId: String, newLimit: Double) {
+        val updates = mapOf("limit" to newLimit)
+        val batch = firestore.batch()
+        batch.update(tenantCreditsRef(tenantId).document(customerId), updates)
+        batch.update(userCreditRef(customerId, tenantId), updates)
+        batch.commit().await()
+    }
+
+    suspend fun approveLimitIncrease(tenantId: String, customerId: String, increaseAmount: Double) {
+        val updates = mapOf(
+            "limit" to FieldValue.increment(increaseAmount),
+            "pendingLimitIncrease" to 0.0
+        )
+        val batch = firestore.batch()
+        batch.update(tenantCreditsRef(tenantId).document(customerId), updates)
+        batch.update(userCreditRef(customerId, tenantId), updates)
+        batch.commit().await()
+    }
+
+    suspend fun rejectLimitIncrease(tenantId: String, customerId: String) {
+        val updates = mapOf("pendingLimitIncrease" to 0.0)
+        val batch = firestore.batch()
+        batch.update(tenantCreditsRef(tenantId).document(customerId), updates)
+        batch.update(userCreditRef(customerId, tenantId), updates)
         batch.commit().await()
     }
 }

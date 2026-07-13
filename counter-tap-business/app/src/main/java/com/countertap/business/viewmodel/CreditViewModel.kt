@@ -85,10 +85,34 @@ class CreditViewModel @Inject constructor(
         }
     }
 
-    fun markSettled(customerId: String, amount: Double) {
+    fun markSettled(customerId: String) {
         val tid = tenantId ?: return
         viewModelScope.launch {
-            try { creditRepository.markSettled(tid, customerId, amount) }
+            try { creditRepository.markSettled(tid, customerId) }
+            catch (e: Exception) { _uiState.value = _uiState.value.copy(error = e.message) }
+        }
+    }
+
+    fun updateLimit(customerId: String, newLimit: Double) {
+        val tid = tenantId ?: return
+        viewModelScope.launch {
+            try { creditRepository.updateLimit(tid, customerId, newLimit) }
+            catch (e: Exception) { _uiState.value = _uiState.value.copy(error = e.message) }
+        }
+    }
+
+    fun approveLimitIncrease(customerId: String, increaseAmount: Double) {
+        val tid = tenantId ?: return
+        viewModelScope.launch {
+            try { creditRepository.approveLimitIncrease(tid, customerId, increaseAmount) }
+            catch (e: Exception) { _uiState.value = _uiState.value.copy(error = e.message) }
+        }
+    }
+
+    fun rejectLimitIncrease(customerId: String) {
+        val tid = tenantId ?: return
+        viewModelScope.launch {
+            try { creditRepository.rejectLimitIncrease(tid, customerId) }
             catch (e: Exception) { _uiState.value = _uiState.value.copy(error = e.message) }
         }
     }

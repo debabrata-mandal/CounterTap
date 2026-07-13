@@ -122,6 +122,13 @@ class CartViewModel @Inject constructor(
         }
     }
 
+    fun requestLimitIncrease(tenantId: String, amount: Double) {
+        viewModelScope.launch {
+            try { creditRepository.requestLimitIncrease(tenantId, amount) }
+            catch (_: Exception) {}
+        }
+    }
+
     fun setPaymentMethod(method: String) {
         _paymentMethod.value = method
     }
