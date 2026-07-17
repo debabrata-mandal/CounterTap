@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -48,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.countertap.customer.ui.home.CustomerBottomNav
 import com.countertap.customer.ui.theme.AccentBlue
 import com.countertap.customer.ui.theme.BackgroundDark
 import com.countertap.customer.ui.theme.TextPrimary
@@ -59,7 +61,11 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.Executors
 
 @Composable
-fun ScannerScreen(onScanned: (String) -> Unit) {
+fun ScannerScreen(
+    onScanned: (String) -> Unit,
+    onHome: () -> Unit,
+    onOrders: () -> Unit
+) {
     val context = LocalContext.current
     var hasCameraPermission by remember { mutableStateOf(false) }
 
@@ -76,7 +82,8 @@ fun ScannerScreen(onScanned: (String) -> Unit) {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(BackgroundDark)) {
+    Column(modifier = Modifier.fillMaxSize().background(BackgroundDark)) {
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
         if (hasCameraPermission) {
             CameraPreview(onScanned = onScanned)
 
@@ -135,8 +142,7 @@ fun ScannerScreen(onScanned: (String) -> Unit) {
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
-                    .padding(bottom = 40.dp),
+                    .padding(bottom = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -170,6 +176,14 @@ fun ScannerScreen(onScanned: (String) -> Unit) {
                 }
             }
         }
+        }
+
+        CustomerBottomNav(
+            selectedIndex = 2,
+            onHome = onHome,
+            onOrders = onOrders,
+            onScan = {}
+        )
     }
 }
 

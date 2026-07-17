@@ -81,11 +81,13 @@ service cloud.firestore {
         allow read:   if isOwner(tenantId) ||
           (request.auth != null && request.auth.uid == customerId);
         allow create: if request.auth != null && request.auth.uid == customerId;
-        // Owner can update anything; customer can only update pendingLimitIncrease
+        // Owner can update anything; customer can update pendingLimitIncrease or
+        // increment balance (credit order charge) — balance may only increase
         allow update: if isOwner(tenantId) ||
           (request.auth != null && request.auth.uid == customerId &&
            request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['pendingLimitIncrease']));
+             .hasOnly(['pendingLimitIncrease', 'balance']) &&
+           request.resource.data.balance >= resource.data.balance);
         allow delete: if isOwner(tenantId);
       }
     }
