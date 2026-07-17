@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.countertap.customer.repository.ShopRecord
+import com.countertap.customer.ui.menu.MenuDisplayModeToggle
 import com.countertap.customer.ui.theme.AccentBlue
 import com.countertap.customer.ui.theme.BackgroundDark
 import com.countertap.customer.ui.theme.CardBackground
@@ -65,8 +66,8 @@ import com.countertap.customer.ui.theme.TextPrimary
 import com.countertap.customer.ui.theme.TextSecondary
 import com.countertap.customer.ui.theme.WarningOrange
 import com.countertap.customer.viewmodel.ActiveOrderInfo
-import com.countertap.customer.viewmodel.AuthViewModel
 import com.countertap.customer.viewmodel.CustomerHomeViewModel
+import com.countertap.customer.viewmodel.MenuDisplayViewModel
 import com.countertap.shared.OrderStatus
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
@@ -78,8 +79,8 @@ fun CustomerHomeScreen(
     onViewHistory: () -> Unit,
     onTrackOrder: (tenantId: String, orderId: String) -> Unit,
     onCreditLines: () -> Unit = {},
-    viewModel: CustomerHomeViewModel = hiltViewModel(),
-    authViewModel: AuthViewModel = hiltViewModel()
+    onSignOut: () -> Unit = {},
+    viewModel: CustomerHomeViewModel = hiltViewModel()
 ) {
     LaunchedEffect(Unit) { viewModel.refresh() }
     val state by viewModel.state.collectAsState()
@@ -131,6 +132,17 @@ fun CustomerHomeScreen(
                     colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent)
                 )
 
+                val menuDisplayViewModel: MenuDisplayViewModel = hiltViewModel()
+                val menuDisplayMode by menuDisplayViewModel.mode.collectAsState()
+
+                MenuDisplayModeToggle(
+                    currentMode = menuDisplayMode,
+                    onModeSelected = menuDisplayViewModel::setMode,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp)
+                )
+
                 Spacer(Modifier.weight(1f))
                 HorizontalDivider(color = DividerColor)
 
@@ -138,7 +150,10 @@ fun CustomerHomeScreen(
                     icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, tint = ErrorRed) },
                     label = { Text("Sign Out", color = ErrorRed) },
                     selected = false,
-                    onClick = { authViewModel.signOut() },
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onSignOut()
+                    },
                     colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent)
                 )
                 Spacer(Modifier.height(16.dp))

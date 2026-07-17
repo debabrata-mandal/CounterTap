@@ -5,10 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,16 +15,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.TableRestaurant
@@ -62,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.countertap.customer.ui.home.CustomerBottomNav
 import com.countertap.customer.ui.theme.AccentBlue
 import com.countertap.customer.ui.theme.BackgroundDark
 import com.countertap.customer.ui.theme.CardBackground
@@ -72,6 +69,7 @@ import com.countertap.customer.ui.theme.TextSecondary
 import com.countertap.customer.ui.theme.SuccessGreen
 import com.countertap.customer.ui.theme.WarningOrange
 import com.countertap.customer.viewmodel.CartViewModel
+import com.countertap.customer.viewmodel.MenuDisplayViewModel
 import com.countertap.customer.viewmodel.MenuViewModel
 import com.countertap.customer.viewmodel.TablePickerState
 import com.countertap.customer.viewmodel.TablePickerViewModel
@@ -87,10 +85,14 @@ import kotlinx.coroutines.launch
 fun MenuScreen(
     tenantId: String,
     onGoToCart: () -> Unit,
+    onHome: () -> Unit,
+    onOrders: () -> Unit,
+    onScan: () -> Unit,
     onChangeRestaurant: () -> Unit = {},
     menuViewModel: MenuViewModel = hiltViewModel(),
     cartViewModel: CartViewModel = hiltViewModel(),
-    tablePickerViewModel: TablePickerViewModel = hiltViewModel()
+    tablePickerViewModel: TablePickerViewModel = hiltViewModel(),
+    menuDisplayViewModel: MenuDisplayViewModel = hiltViewModel()
 ) {
     val uiState by menuViewModel.uiState.collectAsState()
     val cartItems by cartViewModel.items.collectAsState()
@@ -102,6 +104,7 @@ fun MenuScreen(
 
     var pickerProduct by remember { mutableStateOf<Product?>(null) }
     var showTableSheet by remember { mutableStateOf(false) }
+    val menuDisplayMode by menuDisplayViewModel.mode.collectAsState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val tableSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -148,6 +151,8 @@ fun MenuScreen(
 
     Box(modifier = Modifier.fillMaxSize().background(BackgroundDark)) {
         Column(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                Column(modifier = Modifier.fillMaxSize()) {
 
             // Header
             val hasTables = pickerState is TablePickerState.Ready &&
@@ -185,6 +190,31 @@ fun MenuScreen(
                         Icon(
                             Icons.Default.QrCodeScanner,
                             contentDescription = "Change Restaurant",
+                            tint = AccentBlue
+                        )
+                    }
+                    IconButton(
+                        onClick = {
+                            menuDisplayViewModel.setMode(
+                                if (menuDisplayMode == MenuDisplayMode.Scroll) {
+                                    MenuDisplayMode.Book
+                                } else {
+                                    MenuDisplayMode.Scroll
+                                }
+                            )
+                        }
+                    ) {
+                        Icon(
+                            imageVector = if (menuDisplayMode == MenuDisplayMode.Scroll) {
+                                Icons.Default.AutoStories
+                            } else {
+                                Icons.AutoMirrored.Filled.ViewList
+                            },
+                            contentDescription = if (menuDisplayMode == MenuDisplayMode.Scroll) {
+                                "Switch to book view"
+                            } else {
+                                "Switch to list view"
+                            },
                             tint = AccentBlue
                         )
                     }
@@ -326,11 +356,11 @@ fun MenuScreen(
                 }
 
                 else -> {
-                    val grouped = uiState.products.groupBy { it.categoryId }
-                    val knownCategoryIds = uiState.categories.map { it.id }.toSet()
-                    val uncategorized = uiState.products.filter { it.categoryId !in knownCategoryIds }
+                    val sections = remember(uiState.categories, uiState.products) {
+                        buildMenuSections(uiState.categories, uiState.products)
+                    }
 
-                    if (uiState.products.isEmpty()) {
+                    if (sections.isEmpty()) {
                         Box(
                             modifier = Modifier.weight(1f).fillMaxWidth(),
                             contentAlignment = Alignment.Center
@@ -338,67 +368,58 @@ fun MenuScreen(
                             Text("No items on the menu yet.", color = TextSecondary, fontSize = 14.sp)
                         }
                     } else {
-                        LazyColumn(modifier = Modifier.weight(1f)) {
-                            uiState.categories.forEach { category ->
-                                val products = grouped[category.id] ?: emptyList()
-                                if (products.isNotEmpty()) {
-                                    item {
-                                        CategoryHeader(category.name)
-                                    }
-                                    items(products) { product ->
-                                        ProductCard(
-                                            product = product,
-                                            quantity = cartViewModel.quantityOf(product.id),
-                                            onAdd = { cartViewModel.add(product) },
-                                            onRemove = { cartViewModel.remove(product) },
-                                            onOpenPicker = { pickerProduct = product },
-                                            isShopOpen = isShopOpen
-                                        )
-                                    }
-                                }
-                            }
-                            if (uncategorized.isNotEmpty()) {
-                                if (uiState.categories.isNotEmpty()) {
-                                    item { CategoryHeader("OTHER") }
-                                }
-                                items(uncategorized) { product ->
-                                    ProductCard(
-                                        product = product,
-                                        quantity = cartViewModel.quantityOf(product.id),
-                                        onAdd = { cartViewModel.add(product) },
-                                        onRemove = { cartViewModel.remove(product) },
-                                        onOpenPicker = { pickerProduct = product },
-                                        isShopOpen = isShopOpen
-                                    )
-                                }
-                            }
-                            item { Spacer(modifier = Modifier.height(96.dp)) }
+                        val bottomPadding = if (cartCount > 0) 72.dp else 16.dp
+                        when (menuDisplayMode) {
+                            MenuDisplayMode.Scroll -> MenuScrollLayout(
+                                sections = sections,
+                                cartViewModel = cartViewModel,
+                                isShopOpen = isShopOpen,
+                                onOpenPicker = { pickerProduct = it },
+                                bottomPadding = bottomPadding,
+                                modifier = Modifier.weight(1f)
+                            )
+                            MenuDisplayMode.Book -> MenuBookLayout(
+                                sections = sections,
+                                cartViewModel = cartViewModel,
+                                isShopOpen = isShopOpen,
+                                onOpenPicker = { pickerProduct = it },
+                                bottomPadding = bottomPadding,
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
                 }
             }
-        }
+                }
 
-        // Cart bar
-        if (cartCount > 0) {
-            Button(
-                onClick = onGoToCart,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                    .navigationBarsPadding(),
-                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = TextPrimary)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "View Cart  •  $cartCount item${if (cartCount > 1) "s" else ""}  •  ₹${cartTotal.toInt()}",
-                    color = TextPrimary,
-                    fontWeight = FontWeight.SemiBold
-                )
+                // Cart bar — above bottom nav
+                if (cartCount > 0) {
+                    Button(
+                        onClick = onGoToCart,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = TextPrimary)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "View Cart  •  $cartCount item${if (cartCount > 1) "s" else ""}  •  ₹${cartTotal.toInt()}",
+                            color = TextPrimary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
             }
+
+            CustomerBottomNav(
+                selectedIndex = -1,
+                onHome = onHome,
+                onOrders = onOrders,
+                onScan = onScan
+            )
         }
     }
 }
@@ -579,30 +600,6 @@ private fun OptionGroupSection(
     }
 }
 
-@Composable
-private fun CategoryHeader(name: String) {
-    Row(
-        modifier = Modifier.padding(start = 20.dp, top = 24.dp, bottom = 10.dp, end = 20.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .width(3.dp)
-                .height(14.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(AccentBlue)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = name.uppercase(),
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = AccentBlue,
-            letterSpacing = 1.5.sp
-        )
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TablePickerBottomSheet(
@@ -733,155 +730,5 @@ private fun TablePickerBottomSheet(
             }
             Spacer(modifier = Modifier.height(8.dp))
         }
-    }
-}
-
-@Composable
-private fun ProductCard(
-    product: Product,
-    quantity: Int,
-    onAdd: () -> Unit,
-    onRemove: () -> Unit,
-    onOpenPicker: () -> Unit = {},
-    isShopOpen: Boolean = true
-) {
-    val hasOptions = product.optionGroups.isNotEmpty()
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .height(IntrinsicSize.Min)
-            .clip(RoundedCornerShape(12.dp))
-            .background(CardBackground),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .width(4.dp)
-                .fillMaxHeight()
-                .background(AccentBlue.copy(alpha = 0.7f))
-        )
-
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = 12.dp, top = 14.dp, bottom = 14.dp)
-        ) {
-            Text(
-                text = product.name,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
-            )
-            if (product.description.isNotBlank()) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = product.description,
-                    fontSize = 12.sp,
-                    color = TextSecondary,
-                    maxLines = 1
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(AccentBlue.copy(alpha = 0.15f))
-                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = "₹${product.price.toInt()}",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = AccentBlue
-                    )
-                }
-                if (hasOptions) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(CardElevated)
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "Customisable",
-                            fontSize = 11.sp,
-                            color = TextSecondary
-                        )
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        if (isShopOpen) {
-            if (hasOptions) {
-                if (quantity == 0) {
-                    Button(
-                        onClick = onOpenPicker,
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.height(36.dp)
-                    ) {
-                        Text("ADD", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    }
-                } else {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(AccentBlue.copy(alpha = 0.15f))
-                    ) {
-                        Text(
-                            text = "$quantity in cart",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = AccentBlue,
-                            modifier = Modifier.padding(start = 10.dp)
-                        )
-                        IconButton(onClick = onOpenPicker, modifier = Modifier.size(36.dp)) {
-                            Icon(Icons.Default.Add, contentDescription = "Add more", tint = AccentBlue, modifier = Modifier.size(16.dp))
-                        }
-                    }
-                }
-            } else {
-                if (quantity == 0) {
-                    Button(
-                        onClick = onAdd,
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.height(36.dp)
-                    ) {
-                        Text("ADD", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    }
-                } else {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(CardElevated)
-                    ) {
-                        IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
-                            Icon(Icons.Default.Remove, contentDescription = "Remove", tint = AccentBlue, modifier = Modifier.size(16.dp))
-                        }
-                        Text(
-                            text = quantity.toString(),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary,
-                            modifier = Modifier.padding(horizontal = 2.dp)
-                        )
-                        IconButton(onClick = onAdd, modifier = Modifier.size(36.dp)) {
-                            Icon(Icons.Default.Add, contentDescription = "Add", tint = AccentBlue, modifier = Modifier.size(16.dp))
-                        }
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
     }
 }

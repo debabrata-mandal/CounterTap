@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -47,6 +48,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.countertap.customer.ui.home.CustomerBottomNav
 import com.countertap.customer.ui.theme.AccentBlue
 import com.countertap.customer.ui.theme.BackgroundDark
 import com.countertap.customer.ui.theme.CardBackground
@@ -64,6 +66,9 @@ import com.countertap.shared.CreditLineStatus
 @Composable
 fun CustomerCreditLinesScreen(
     onBack: () -> Unit,
+    onHome: () -> Unit,
+    onOrders: () -> Unit,
+    onScan: () -> Unit,
     viewModel: CustomerCreditViewModel = hiltViewModel()
 ) {
     val creditLines by viewModel.creditLines.collectAsState()
@@ -74,8 +79,13 @@ fun CustomerCreditLinesScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundDark)
-            .statusBarsPadding()
     ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .statusBarsPadding()
+        ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -93,16 +103,26 @@ fun CustomerCreditLinesScreen(
 
             creditLines.isEmpty() -> EmptyState()
 
-            else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
+            else -> LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
                 items(creditLines, key = { "${it.tenantId}_${it.customerId}" }) { line ->
                     CreditLineCard(
                         line = line,
                         onRequestIncrease = { requestingIncreaseFor = line }
                     )
                 }
-                item { Spacer(Modifier.height(80.dp)) }
             }
         }
+        }
+
+        CustomerBottomNav(
+            selectedIndex = -1,
+            onHome = onHome,
+            onOrders = onOrders,
+            onScan = onScan
+        )
     }
 
     requestingIncreaseFor?.let { line ->

@@ -16,6 +16,7 @@ import com.countertap.customer.ui.menu.MenuScreen
 import com.countertap.customer.ui.order.OrderTrackingScreen
 import com.countertap.customer.ui.orders.OrderHistoryScreen
 import com.countertap.customer.ui.scanner.ScannerScreen
+import com.countertap.customer.viewmodel.AuthViewModel
 import com.countertap.customer.viewmodel.CartViewModel
 
 @Composable
@@ -35,6 +36,7 @@ fun AppNavGraph(startDestination: String) {
         }
 
         composable(Routes.HOME) {
+            val authViewModel: AuthViewModel = hiltViewModel()
             CustomerHomeScreen(
                 onOpenMenu = { tenantId ->
                     navController.navigate(Routes.menu(tenantId))
@@ -50,13 +52,30 @@ fun AppNavGraph(startDestination: String) {
                 },
                 onCreditLines = {
                     navController.navigate(Routes.CUSTOMER_CREDIT_LINES)
+                },
+                onSignOut = {
+                    authViewModel.signOut()
+                    navController.navigate(Routes.SIGN_IN) {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
             )
         }
 
         composable(Routes.CUSTOMER_CREDIT_LINES) {
             CustomerCreditLinesScreen(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onHome = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = false }
+                    }
+                },
+                onOrders = {
+                    navController.navigate(Routes.ORDER_HISTORY)
+                },
+                onScan = {
+                    navController.navigate(Routes.SCANNER)
+                }
             )
         }
 
@@ -82,6 +101,14 @@ fun AppNavGraph(startDestination: String) {
                     navController.navigate(Routes.menu(tenantId)) {
                         popUpTo(Routes.SCANNER) { inclusive = true }
                     }
+                },
+                onHome = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = false }
+                    }
+                },
+                onOrders = {
+                    navController.navigate(Routes.ORDER_HISTORY)
                 }
             )
         }
@@ -95,6 +122,17 @@ fun AppNavGraph(startDestination: String) {
             MenuScreen(
                 tenantId = tenantId,
                 onGoToCart = { navController.navigate(Routes.cart(tenantId)) },
+                onHome = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = false }
+                    }
+                },
+                onOrders = {
+                    navController.navigate(Routes.ORDER_HISTORY)
+                },
+                onScan = {
+                    navController.navigate(Routes.SCANNER)
+                },
                 onChangeRestaurant = {
                     navController.navigate(Routes.HOME) {
                         popUpTo(Routes.HOME) { inclusive = false }

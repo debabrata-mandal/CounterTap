@@ -56,7 +56,7 @@ fun CustomerBottomNav(
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         tabs.forEachIndexed { index, tab ->
-            val isSelected = index == selectedIndex
+            val isSelected = selectedIndex >= 0 && index == selectedIndex
             val iconTint by animateColorAsState(
                 targetValue = if (isSelected) AccentBlue else TextSecondary,
                 label = "tint_$index"
